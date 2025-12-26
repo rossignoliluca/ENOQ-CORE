@@ -7,7 +7,7 @@
  * This is ENOQ.
  */
 
-import { FieldState, ProtocolSelection, GoalType, Flag, GateSignal, GateReasonCode } from './types';
+import { FieldState, ProtocolSelection, GoalType, Flag, GateSignal, GateReasonCode, SupportedLanguage } from './types';
 import { perceive } from './perception';
 import { select } from './selection';
 import { applyDomainGovernor, GovernorResult } from './domain_governor';
@@ -135,7 +135,7 @@ export interface SessionMemory {
 
   // Relational
   name?: string;
-  language_preference: 'en' | 'it' | 'auto';
+  language_preference: SupportedLanguage | 'auto';
 }
 
 export interface PipelineResult {
@@ -366,7 +366,7 @@ export async function enoq(
   const s1_field = perceive(s0_input);
 
   // Update session memory with language
-  if (s1_field.language && s1_field.language !== 'mixed') {
+  if (s1_field.language && s1_field.language !== 'mixed' && s1_field.language !== 'unknown') {
     session.memory.language_preference = s1_field.language;
   }
 
@@ -563,7 +563,7 @@ export async function enoq(
     selection: s3_selection,
     output: {
       text: s4_result.output,
-      language: (session.memory.language_preference === 'auto' ? 'en' : session.memory.language_preference) as 'en' | 'it',
+      language: session.memory.language_preference === 'auto' ? 'en' : session.memory.language_preference,
       word_count: s4_result.output.split(/\s+/).length,
       generation_method: s4_context.runtime === 'L2_SURFACE' ? 'template' : 'llm',
     },

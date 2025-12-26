@@ -5,16 +5,18 @@
  * Does NOT generate response. Only perceives.
  */
 
-import { 
-  FieldState, 
-  DomainActivation, 
+import {
+  FieldState,
+  DomainActivation,
   Domain,
   HumanDomain,
-  Arousal, 
-  Valence, 
+  Arousal,
+  Valence,
   GoalType,
   Flag,
-  Coherence
+  Coherence,
+  SupportedLanguage,
+  LanguageDetectionResult,
 } from './types';
 
 // ============================================
@@ -398,43 +400,429 @@ export function perceive(message: string, conversationHistory: string[] = []): F
 }
 
 // ============================================
-// LANGUAGE DETECTION
+// LANGUAGE DETECTION (40 Languages)
 // ============================================
 
-function detectLanguage(message: string): 'en' | 'it' | 'mixed' {
-  const italianMarkers = [
-    /\b(ciao|come|stai|sono|cosa|perché|perche|che|non|mi|ti|si|ci|lo|la|il|gli|le|un|una|del|della|nel|nella)\b/i,
-    /\b(oggi|domani|ieri|sempre|mai|molto|poco|bene|male|grazie|prego|scusa)\b/i,
-    /\b(voglio|posso|devo|faccio|vado|vengo|prendo|metto|dico|penso|sento|capisco)\b/i,
-    /\b(aiuto|aiutami|dimmi|fammi|parlami)\b/i,
-  ];
-  
-  const englishMarkers = [
-    /\b(the|a|an|is|are|was|were|have|has|had|do|does|did|will|would|could|should)\b/i,
-    /\b(I|you|he|she|it|we|they|my|your|his|her|its|our|their)\b/i,
-    /\b(what|why|how|when|where|who|which)\b/i,
-    /\b(help|tell|show|give|take|make|get|want|need|feel|think|know)\b/i,
-  ];
-  
-  let italianScore = 0;
-  let englishScore = 0;
-  
-  for (const pattern of italianMarkers) {
-    if (pattern.test(message)) italianScore++;
+interface LanguageMarkerSet {
+  lang: SupportedLanguage;
+  markers: RegExp[];
+  scripts?: RegExp[]; // Unique script patterns (e.g., Devanagari, Arabic)
+}
+
+const LANGUAGE_MARKERS: LanguageMarkerSet[] = [
+  // ===== TIER 1: 500M+ speakers =====
+  // English
+  {
+    lang: 'en',
+    markers: [
+      /\b(the|a|an|is|are|was|were|have|has|had|do|does|did|will|would|could|should)\b/i,
+      /\b(I|you|he|she|it|we|they|my|your|his|her|its|our|their)\b/i,
+      /\b(what|why|how|when|where|who|which)\b/i,
+      /\b(help|tell|show|give|take|make|get|want|need|feel|think|know)\b/i,
+    ],
+  },
+  // Chinese (Mandarin)
+  {
+    lang: 'zh',
+    markers: [/[\u4e00-\u9fff]/],
+    scripts: [/[\u4e00-\u9fff]{2,}/],
+  },
+  // Hindi
+  {
+    lang: 'hi',
+    markers: [
+      /[\u0900-\u097F]/,
+      /\b(है|हैं|हूं|था|थी|थे|और|का|की|के|को|से|में|पर|यह|वह|क्या|कैसे|क्यों)\b/,
+    ],
+    scripts: [/[\u0900-\u097F]{2,}/],
+  },
+  // Spanish
+  {
+    lang: 'es',
+    markers: [
+      /\b(el|la|los|las|un|una|es|son|está|están|que|de|en|por|para|con|como|pero|porque)\b/i,
+      /\b(yo|tú|él|ella|nosotros|ellos|mi|tu|su|qué|cómo|dónde|cuándo|quién)\b/i,
+      /[áéíóúñ¿¡]/i,
+    ],
+  },
+
+  // ===== TIER 2: 200-500M speakers =====
+  // French
+  {
+    lang: 'fr',
+    markers: [
+      /\b(le|la|les|un|une|des|est|sont|et|ou|mais|que|qui|où|quand|comment|pourquoi)\b/i,
+      /\b(je|tu|il|elle|nous|vous|ils|elles|mon|ton|son|ce|cette)\b/i,
+      /[àâçéèêëîïôùûü]/i,
+    ],
+  },
+  // Arabic
+  {
+    lang: 'ar',
+    markers: [/[\u0600-\u06FF]/],
+    scripts: [/[\u0600-\u06FF]{2,}/],
+  },
+  // Bengali
+  {
+    lang: 'bn',
+    markers: [/[\u0980-\u09FF]/],
+    scripts: [/[\u0980-\u09FF]{2,}/],
+  },
+  // Portuguese
+  {
+    lang: 'pt',
+    markers: [
+      /\b(o|a|os|as|um|uma|é|são|está|estão|que|de|em|por|para|com|como|mas|porque)\b/i,
+      /\b(eu|tu|ele|ela|nós|vocês|eles|meu|teu|seu)\b/i,
+      /[ãõáéíóúâêôç]/i,
+    ],
+  },
+  // Russian
+  {
+    lang: 'ru',
+    markers: [
+      /[\u0400-\u04FF]/,
+      /\b(и|в|не|на|с|что|как|это|по|но|из|у|за|так|все|она|он|они|мы|вы)\b/i,
+    ],
+    scripts: [/[\u0400-\u04FF]{2,}/],
+  },
+  // Urdu
+  {
+    lang: 'ur',
+    markers: [
+      /[\u0600-\u06FF]/,
+      /\b(ہے|ہیں|تھا|تھی|اور|کا|کی|کے|کو|سے|میں|پر|یہ|وہ|کیا|کیسے|کیوں)\b/,
+    ],
+    scripts: [/[\u0600-\u06FF]{2,}/],
+  },
+  // Indonesian
+  {
+    lang: 'id',
+    markers: [
+      /\b(yang|dan|di|ini|itu|dengan|untuk|dari|ke|pada|tidak|ada|saya|anda|kita|mereka)\b/i,
+      /\b(adalah|akan|sudah|bisa|harus|mau|perlu|boleh|jangan)\b/i,
+    ],
+  },
+
+  // ===== TIER 3: 75-200M speakers =====
+  // German
+  {
+    lang: 'de',
+    markers: [
+      /\b(der|die|das|ein|eine|ist|sind|hat|haben|und|oder|aber|weil|dass|wenn|wie|was|wer|wo)\b/i,
+      /\b(ich|du|er|sie|es|wir|ihr|mein|dein|sein)\b/i,
+      /[äöüß]/i,
+    ],
+  },
+  // Japanese
+  {
+    lang: 'ja',
+    markers: [/[\u3040-\u309F]/, /[\u30A0-\u30FF]/],
+    scripts: [/[\u3040-\u309F\u30A0-\u30FF]{2,}/],
+  },
+  // Punjabi
+  {
+    lang: 'pa',
+    markers: [/[\u0A00-\u0A7F]/], // Gurmukhi script
+    scripts: [/[\u0A00-\u0A7F]{2,}/],
+  },
+  // Swahili
+  {
+    lang: 'sw',
+    markers: [
+      /\b(ni|na|wa|ya|kwa|la|za|katika|au|lakini|kama|kwamba|nini|wapi|lini|vipi)\b/i,
+      /\b(mimi|wewe|yeye|sisi|nyinyi|wao|wangu|wako|wake)\b/i,
+    ],
+  },
+  // Marathi
+  {
+    lang: 'mr',
+    markers: [
+      /[\u0900-\u097F]/,
+      /\b(आहे|आहेत|होता|होती|आणि|चा|ची|चे|ला|ते|हे|का|कसे)\b/,
+    ],
+    scripts: [/[\u0900-\u097F]{2,}/],
+  },
+  // Turkish
+  {
+    lang: 'tr',
+    markers: [
+      /\b(ve|bir|bu|için|ile|da|de|mi|mı|var|yok|ne|nasıl|neden|kim|nerede)\b/i,
+      /\b(ben|sen|o|biz|siz|onlar|benim|senin|onun)\b/i,
+      /[çğışöü]/i,
+    ],
+  },
+  // Vietnamese
+  {
+    lang: 'vi',
+    markers: [
+      /\b(và|của|là|có|không|này|đó|được|để|từ|trong|với|như|nhưng)\b/i,
+      /\b(tôi|bạn|anh|chị|em|chúng tôi|họ|của tôi|của bạn)\b/i,
+      /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i,
+    ],
+  },
+  // Korean
+  {
+    lang: 'ko',
+    markers: [/[\uAC00-\uD7AF]/], // Hangul
+    scripts: [/[\uAC00-\uD7AF]{2,}/],
+  },
+  // Telugu
+  {
+    lang: 'te',
+    markers: [/[\u0C00-\u0C7F]/],
+    scripts: [/[\u0C00-\u0C7F]{2,}/],
+  },
+  // Tamil
+  {
+    lang: 'ta',
+    markers: [/[\u0B80-\u0BFF]/],
+    scripts: [/[\u0B80-\u0BFF]{2,}/],
+  },
+  // Persian
+  {
+    lang: 'fa',
+    markers: [
+      /[\u0600-\u06FF]/,
+      /\b(است|هست|بود|و|یا|اما|که|از|به|با|در|این|آن|چه|چرا|کجا)\b/,
+    ],
+    scripts: [/[\u0600-\u06FF]{2,}/],
+  },
+  // Malay
+  {
+    lang: 'ms',
+    markers: [
+      /\b(yang|dan|di|ini|itu|dengan|untuk|dari|ke|pada|tidak|ada|saya|anda|kita|mereka)\b/i,
+      /\b(adalah|akan|sudah|boleh|hendak|perlu|mahu)\b/i,
+    ],
+  },
+  // Hausa
+  {
+    lang: 'ha',
+    markers: [
+      /\b(da|a|ba|ta|na|shi|ita|su|mu|ku|yi|za|don|amma|ko|idan|me|wane|ina|yaya)\b/i,
+      /[ɓɗƙ]/i,
+    ],
+  },
+
+  // ===== TIER 4: 30-75M speakers =====
+  // Italian
+  {
+    lang: 'it',
+    markers: [
+      /\b(il|lo|la|i|gli|le|un|uno|una|è|sono|ha|hanno|e|o|ma|perché|che|come|cosa|chi|dove|quando)\b/i,
+      /\b(io|tu|lui|lei|noi|voi|loro|mio|tuo|suo|questo|quello)\b/i,
+      /\b(ciao|grazie|prego|scusa|aiuto|dimmi|parlami)\b/i,
+      /[àèéìíòóùú]/i,
+    ],
+  },
+  // Thai
+  {
+    lang: 'th',
+    markers: [/[\u0E00-\u0E7F]/],
+    scripts: [/[\u0E00-\u0E7F]{2,}/],
+  },
+  // Amharic
+  {
+    lang: 'am',
+    markers: [/[\u1200-\u137F]/], // Ethiopic
+    scripts: [/[\u1200-\u137F]{2,}/],
+  },
+  // Gujarati
+  {
+    lang: 'gu',
+    markers: [/[\u0A80-\u0AFF]/],
+    scripts: [/[\u0A80-\u0AFF]{2,}/],
+  },
+  // Yoruba
+  {
+    lang: 'yo',
+    markers: [
+      /\b(ati|ni|ti|si|fun|lati|ninu|pelu|sugbon|tabi|kini|nibo|nigbati|bawo)\b/i,
+      /\b(mo|o|a|won|wa|mi|re|e)\b/i,
+      /[ẹọṣ]/i,
+    ],
+  },
+  // Polish
+  {
+    lang: 'pl',
+    markers: [
+      /\b(i|w|nie|na|z|co|jak|to|ale|bo|że|gdy|kto|gdzie|kiedy|dlaczego)\b/i,
+      /\b(ja|ty|on|ona|my|wy|oni|mój|twój|jego|jej)\b/i,
+      /[ąćęłńóśźż]/i,
+    ],
+  },
+  // Ukrainian
+  {
+    lang: 'uk',
+    markers: [
+      /[\u0400-\u04FF]/,
+      /\b(і|в|не|на|з|що|як|це|але|бо|або|коли|хто|де|чому)\b/i,
+      /[ієїґ]/i,
+    ],
+    scripts: [/[\u0400-\u04FF]{2,}/],
+  },
+  // Filipino
+  {
+    lang: 'fil',
+    markers: [
+      /\b(ang|ng|sa|at|ay|mga|na|kung|pero|o|ano|sino|saan|kailan|bakit|paano)\b/i,
+      /\b(ako|ka|ikaw|siya|kami|tayo|sila|ko|mo|niya|namin)\b/i,
+    ],
+  },
+  // Kannada
+  {
+    lang: 'kn',
+    markers: [/[\u0C80-\u0CFF]/],
+    scripts: [/[\u0C80-\u0CFF]{2,}/],
+  },
+  // Malayalam
+  {
+    lang: 'ml',
+    markers: [/[\u0D00-\u0D7F]/],
+    scripts: [/[\u0D00-\u0D7F]{2,}/],
+  },
+  // Burmese
+  {
+    lang: 'my',
+    markers: [/[\u1000-\u109F]/],
+    scripts: [/[\u1000-\u109F]{2,}/],
+  },
+
+  // ===== TIER 5: European & strategic =====
+  // Dutch
+  {
+    lang: 'nl',
+    markers: [
+      /\b(de|het|een|is|zijn|heeft|hebben|en|of|maar|omdat|dat|die|wat|wie|waar|wanneer|hoe|waarom)\b/i,
+      /\b(ik|jij|hij|zij|wij|jullie|zij|mijn|jouw|zijn|haar)\b/i,
+      /[ĳ]/i,
+    ],
+  },
+  // Romanian
+  {
+    lang: 'ro',
+    markers: [
+      /\b(și|în|la|cu|de|pe|un|o|este|sunt|a|au|dar|sau|că|ce|cine|unde|când|cum|de ce)\b/i,
+      /\b(eu|tu|el|ea|noi|voi|ei|ele|meu|tău|său)\b/i,
+      /[ăâîșț]/i,
+    ],
+  },
+  // Greek
+  {
+    lang: 'el',
+    markers: [/[\u0370-\u03FF]/],
+    scripts: [/[\u0370-\u03FF]{2,}/],
+  },
+  // Hungarian
+  {
+    lang: 'hu',
+    markers: [
+      /\b(és|a|az|hogy|nem|van|volt|de|vagy|ha|mi|ki|hol|mikor|hogyan|miért)\b/i,
+      /\b(én|te|ő|mi|ti|ők|az én|a te|az ő)\b/i,
+      /[áéíóöőúüű]/i,
+    ],
+  },
+  // Hebrew
+  {
+    lang: 'he',
+    markers: [/[\u0590-\u05FF]/],
+    scripts: [/[\u0590-\u05FF]{2,}/],
+  },
+];
+
+/**
+ * Detect language from message text.
+ * Returns the most likely language, 'mixed' if multiple detected, or 'unknown'.
+ */
+function detectLanguage(message: string): LanguageDetectionResult {
+  const scores: Record<string, number> = {};
+
+  // Initialize scores
+  for (const langSet of LANGUAGE_MARKERS) {
+    scores[langSet.lang] = 0;
   }
-  
-  for (const pattern of englishMarkers) {
-    if (pattern.test(message)) englishScore++;
+
+  // Check each language's markers
+  for (const langSet of LANGUAGE_MARKERS) {
+    // Script detection (high weight for unique scripts)
+    if (langSet.scripts) {
+      for (const script of langSet.scripts) {
+        if (script.test(message)) {
+          scores[langSet.lang] += 10; // High weight for script match
+        }
+      }
+    }
+
+    // Lexical markers
+    for (const marker of langSet.markers) {
+      if (marker.test(message)) {
+        scores[langSet.lang] += 1;
+      }
+    }
   }
-  
-  if (italianScore > 0 && englishScore > 0) {
-    return italianScore > englishScore ? 'it' : englishScore > italianScore ? 'en' : 'mixed';
+
+  // Find languages with positive scores
+  const detected = Object.entries(scores)
+    .filter(([_, score]) => score > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (detected.length === 0) {
+    return 'unknown';
   }
-  
-  if (italianScore > 0) return 'it';
-  if (englishScore > 0) return 'en';
-  
-  return 'en'; // default
+
+  if (detected.length === 1) {
+    return detected[0][0] as SupportedLanguage;
+  }
+
+  // Multiple languages detected
+  const topScore = detected[0][1];
+  const secondScore = detected[1][1];
+
+  // If top score is significantly higher, use it
+  if (topScore >= secondScore * 2) {
+    return detected[0][0] as SupportedLanguage;
+  }
+
+  // Disambiguation for similar scripts
+  // Hindi vs Marathi (both Devanagari)
+  if (detected[0][0] === 'hi' && detected[1][0] === 'mr') {
+    // Check for Marathi-specific words
+    if (/\b(आहे|आहेत|चा|ची|चे)\b/.test(message)) {
+      return 'mr';
+    }
+    return 'hi';
+  }
+
+  // Arabic vs Urdu (both Arabic script)
+  if ((detected[0][0] === 'ar' && detected[1][0] === 'ur') ||
+      (detected[0][0] === 'ur' && detected[1][0] === 'ar')) {
+    // Check for Urdu-specific patterns
+    if (/\b(ہے|ہیں|کا|کی|کے)\b/.test(message)) {
+      return 'ur';
+    }
+    return 'ar';
+  }
+
+  // Spanish vs Portuguese (similar vocabularies)
+  if ((detected[0][0] === 'es' && detected[1][0] === 'pt') ||
+      (detected[0][0] === 'pt' && detected[1][0] === 'es')) {
+    // Portuguese-specific
+    if (/\b(você|vocês|não|são|estão|também|então)\b/i.test(message)) {
+      return 'pt';
+    }
+    // Spanish-specific
+    if (/\b(usted|ustedes|también|entonces|siempre|nunca)\b/i.test(message)) {
+      return 'es';
+    }
+  }
+
+  // If still ambiguous, return top score
+  if (topScore > secondScore) {
+    return detected[0][0] as SupportedLanguage;
+  }
+
+  return 'mixed';
 }
 
 // ============================================

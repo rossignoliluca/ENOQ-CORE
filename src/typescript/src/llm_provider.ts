@@ -1,14 +1,16 @@
 /**
  * ENOQ LLM PROVIDER
- * 
+ *
  * Multi-LLM abstraction layer.
  * Reads API keys from environment variables.
  * Routes to appropriate model based on task.
- * 
+ *
  * Environment variables:
  * - OPENAI_API_KEY: OpenAI API key
  * - ANTHROPIC_API_KEY: Anthropic API key (optional)
  */
+
+import { SupportedLanguage, CULTURE_PROFILES } from './types';
 
 // ============================================
 // TYPES
@@ -249,7 +251,7 @@ export interface GenerationContext {
   depth: string;
   forbidden: string[];
   required: string[];
-  language: 'en' | 'it';
+  language: SupportedLanguage;
   user_message: string;
 }
 
@@ -278,9 +280,71 @@ export async function generateResponse(
   }
 }
 
+const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
+  // Tier 1
+  en: 'English',
+  zh: 'Chinese (Mandarin)',
+  hi: 'Hindi',
+  es: 'Spanish',
+  // Tier 2
+  fr: 'French',
+  ar: 'Arabic',
+  bn: 'Bengali',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  ur: 'Urdu',
+  id: 'Indonesian',
+  // Tier 3
+  de: 'German',
+  ja: 'Japanese',
+  pa: 'Punjabi',
+  sw: 'Swahili',
+  mr: 'Marathi',
+  tr: 'Turkish',
+  vi: 'Vietnamese',
+  ko: 'Korean',
+  te: 'Telugu',
+  ta: 'Tamil',
+  fa: 'Persian',
+  ms: 'Malay',
+  ha: 'Hausa',
+  // Tier 4
+  it: 'Italian',
+  th: 'Thai',
+  am: 'Amharic',
+  gu: 'Gujarati',
+  yo: 'Yoruba',
+  pl: 'Polish',
+  uk: 'Ukrainian',
+  fil: 'Filipino',
+  kn: 'Kannada',
+  ml: 'Malayalam',
+  my: 'Burmese',
+  // Tier 5
+  nl: 'Dutch',
+  ro: 'Romanian',
+  el: 'Greek',
+  hu: 'Hungarian',
+  he: 'Hebrew',
+};
+
 function buildSystemPrompt(context: GenerationContext): string {
-  const lang = context.language === 'it' ? 'Italian' : 'English';
-  
+  const lang = LANGUAGE_NAMES[context.language];
+  const cultureProfile = CULTURE_PROFILES[context.language];
+
+  // Adapt tone based on culture
+  const formalityNote = cultureProfile.formality === 'formal'
+    ? 'Use formal, respectful language appropriate to the culture.'
+    : cultureProfile.formality === 'casual'
+    ? 'Use natural, conversational language.'
+    : 'Use balanced, neutral formality.';
+
+  const directnessNote = cultureProfile.directness === 'low'
+    ? 'Be indirect and gentle in phrasing. Avoid bluntness.'
+    : cultureProfile.directness === 'high'
+    ? 'Be clear and direct while remaining compassionate.'
+    : 'Balance directness with sensitivity.';
+
   return `You are ENOQ, a cognitive companion that helps humans see their patterns without creating dependency.
 
 CRITICAL RULES:
@@ -293,6 +357,8 @@ ATMOSPHERE: ${context.atmosphere}
 PRIMITIVE: ${context.primitive}
 DEPTH: ${context.depth}
 LANGUAGE: Respond in ${lang}
+${formalityNote}
+${directnessNote}
 
 CORE PRINCIPLE: You see everything but decide nothing. Return ownership to the human.
 

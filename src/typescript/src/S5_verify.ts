@@ -7,7 +7,7 @@
  * Produces audit trail.
  */
 
-import { FieldState, ProtocolSelection } from './types';
+import { FieldState, ProtocolSelection, SupportedLanguage } from './types';
 import * as crypto from 'crypto';
 
 // ============================================
@@ -16,7 +16,7 @@ import * as crypto from 'crypto';
 
 export interface GeneratedOutput {
   text: string;
-  language: 'en' | 'it' | 'mixed';
+  language: SupportedLanguage | 'mixed';
   word_count: number;
   generation_method: 'template' | 'llm' | 'hybrid';
 }
@@ -560,21 +560,77 @@ export function verify(input: S5Input, attemptCount: number = 0): S5Result {
 // FALLBACK OUTPUTS
 // ============================================
 
-export const FALLBACK_TEMPLATES: Record<string, Record<string, string>> = {
+export const FALLBACK_TEMPLATES: Record<string, Partial<Record<SupportedLanguage, string>>> = {
   PRESENCE: {
     en: "I'm here with you.",
+    zh: "我在这里陪着你。",
+    hi: "मैं यहाँ आपके साथ हूँ।",
+    es: "Estoy aquí contigo.",
+    fr: "Je suis là avec vous.",
+    ar: "أنا هنا معك.",
+    bn: "আমি আপনার সাথে আছি।",
+    ru: "Я здесь с вами.",
+    pt: "Estou aqui com você.",
+    id: "Saya di sini bersamamu.",
+    ur: "میں یہاں آپ کے ساتھ ہوں۔",
+    de: "Ich bin hier bei Ihnen.",
+    ja: "私はあなたと一緒にいます。",
+    sw: "Niko hapa nawe.",
+    mr: "मी तुमच्यासोबत आहे.",
     it: "Sono qui con te.",
   },
   SURFACE_GROUND: {
     en: "Let's pause for a moment. What do you notice right now?",
+    zh: "让我们暂停一下。你现在注意到什么？",
+    hi: "एक पल के लिए रुकें। अभी आप क्या महसूस कर रहे हैं?",
+    es: "Hagamos una pausa. ¿Qué notas ahora mismo?",
+    fr: "Faisons une pause. Que remarquez-vous en ce moment?",
+    ar: "دعنا نتوقف للحظة. ماذا تلاحظ الآن؟",
+    bn: "একটু থামি। এখন আপনি কী লক্ষ্য করছেন?",
+    ru: "Давайте остановимся на мгновение. Что вы замечаете сейчас?",
+    pt: "Vamos fazer uma pausa. O que você percebe agora?",
+    id: "Mari berhenti sejenak. Apa yang kamu perhatikan sekarang?",
+    ur: "ایک لمحے کے لیے رکیں۔ ابھی آپ کیا محسوس کر رہے ہیں؟",
+    de: "Lassen Sie uns einen Moment innehalten. Was bemerken Sie gerade?",
+    ja: "少し立ち止まりましょう。今、何を感じていますか？",
+    sw: "Tusimame kwa muda. Unaona nini sasa hivi?",
+    mr: "एक क्षण थांबू या. तुम्हाला आत्ता काय जाणवतंय?",
     it: "Fermiamoci un momento. Cosa noti adesso?",
   },
   SURFACE_RETURN: {
     en: "This is yours to decide. What feels true to you?",
+    zh: "这是你的决定。什么对你来说是真实的？",
+    hi: "यह निर्णय आपका है। आपको क्या सच लगता है?",
+    es: "Esta decisión es tuya. ¿Qué sientes verdadero?",
+    fr: "C'est à vous de décider. Qu'est-ce qui vous semble vrai?",
+    ar: "هذا قرارك. ما الذي يبدو حقيقياً لك؟",
+    bn: "এই সিদ্ধান্ত আপনার। আপনার কাছে কী সত্য মনে হয়?",
+    ru: "Это ваше решение. Что кажется вам истинным?",
+    pt: "Esta decisão é sua. O que parece verdadeiro para você?",
+    id: "Ini keputusanmu. Apa yang terasa benar untukmu?",
+    ur: "یہ فیصلہ آپ کا ہے۔ آپ کو کیا سچ لگتا ہے؟",
+    de: "Das ist Ihre Entscheidung. Was fühlt sich für Sie wahr an?",
+    ja: "これはあなたが決めることです。何があなたにとって真実ですか？",
+    sw: "Hii ni yako kuamua. Nini kinakuonekana kweli kwako?",
+    mr: "हा निर्णय तुमचा आहे. तुम्हाला काय खरं वाटतं?",
     it: "Questa decisione è tua. Cosa senti vero?",
   },
   SURFACE_VALIDATE: {
     en: "I hear you. That makes sense.",
+    zh: "我听到了。这很有道理。",
+    hi: "मैं समझता/समझती हूँ। यह समझ में आता है।",
+    es: "Te escucho. Tiene sentido.",
+    fr: "Je vous entends. Cela a du sens.",
+    ar: "أسمعك. هذا منطقي.",
+    bn: "আমি শুনছি। এটা বোধগম্য।",
+    ru: "Я слышу вас. Это имеет смысл.",
+    pt: "Eu ouço você. Faz sentido.",
+    id: "Aku mendengarmu. Itu masuk akal.",
+    ur: "میں سمجھتا/سمجھتی ہوں۔ یہ سمجھ میں آتا ہے۔",
+    de: "Ich höre Sie. Das macht Sinn.",
+    ja: "聞いています。それは理解できます。",
+    sw: "Ninakusikia. Hiyo ina maana.",
+    mr: "मी ऐकतोय. ते समजण्यासारखे आहे.",
     it: "Ti sento. Ha senso.",
   },
 };
@@ -582,25 +638,25 @@ export const FALLBACK_TEMPLATES: Record<string, Record<string, string>> = {
 export function getFallbackOutput(
   level: FallbackLevel,
   selection: ProtocolSelection,
-  language: 'en' | 'it'
+  language: SupportedLanguage
 ): string | null {
   if (level === 'STOP') {
     return null;
   }
-  
+
   if (level === 'PRESENCE') {
-    return FALLBACK_TEMPLATES.PRESENCE[language];
+    return FALLBACK_TEMPLATES.PRESENCE[language] || FALLBACK_TEMPLATES.PRESENCE.en || "I'm here with you.";
   }
-  
+
   if (level === 'SURFACE') {
     // Select appropriate surface template based on context
     if (selection.atmosphere === 'EMERGENCY') {
-      return FALLBACK_TEMPLATES.SURFACE_GROUND[language];
+      return FALLBACK_TEMPLATES.SURFACE_GROUND[language] || FALLBACK_TEMPLATES.SURFACE_GROUND.en || "Let's pause for a moment.";
     }
     if (selection.atmosphere === 'V_MODE') {
-      return FALLBACK_TEMPLATES.SURFACE_RETURN[language];
+      return FALLBACK_TEMPLATES.SURFACE_RETURN[language] || FALLBACK_TEMPLATES.SURFACE_RETURN.en || "This is yours to decide.";
     }
-    return FALLBACK_TEMPLATES.SURFACE_VALIDATE[language];
+    return FALLBACK_TEMPLATES.SURFACE_VALIDATE[language] || FALLBACK_TEMPLATES.SURFACE_VALIDATE.en || "I hear you.";
   }
   
   // REGENERATE and MEDIUM don't have fixed outputs

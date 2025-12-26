@@ -82,6 +82,134 @@ export type RequiredAction =
   | 'simplify';
 
 // ============================================
+// LANGUAGE & CULTURE
+// ============================================
+
+/**
+ * Supported languages (40 languages)
+ * Coverage: ~6.5B people (~80% world population)
+ */
+export type SupportedLanguage =
+  // Tier 1: 500M+ speakers
+  | 'en'   // English (1.5B)
+  | 'zh'   // 中文 Mandarin Chinese (1.1B)
+  | 'hi'   // हिन्दी Hindi (615M)
+  | 'es'   // Español Spanish (570M)
+  // Tier 2: 200-500M speakers
+  | 'fr'   // Français French (280M)
+  | 'ar'   // العربية Arabic (274M)
+  | 'bn'   // বাংলা Bengali (265M)
+  | 'pt'   // Português Portuguese (260M)
+  | 'ru'   // Русский Russian (258M)
+  | 'ur'   // اردو Urdu (230M)
+  | 'id'   // Bahasa Indonesia (200M)
+  // Tier 3: 75-200M speakers
+  | 'de'   // Deutsch German (130M)
+  | 'ja'   // 日本語 Japanese (128M)
+  | 'pa'   // ਪੰਜਾਬੀ Punjabi (125M)
+  | 'sw'   // Kiswahili Swahili (98M)
+  | 'mr'   // मराठी Marathi (95M)
+  | 'tr'   // Türkçe Turkish (88M)
+  | 'vi'   // Tiếng Việt Vietnamese (85M)
+  | 'ko'   // 한국어 Korean (82M)
+  | 'te'   // తెలుగు Telugu (83M)
+  | 'ta'   // தமிழ் Tamil (78M)
+  | 'fa'   // فارسی Persian (77M)
+  | 'ms'   // Bahasa Melayu Malay (77M)
+  | 'ha'   // Hausa (77M)
+  // Tier 4: 30-75M speakers
+  | 'it'   // Italiano Italian (65M)
+  | 'th'   // ไทย Thai (60M)
+  | 'am'   // አማርኛ Amharic (57M)
+  | 'gu'   // ગુજરાતી Gujarati (56M)
+  | 'yo'   // Yorùbá Yoruba (47M)
+  | 'pl'   // Polski Polish (45M)
+  | 'uk'   // Українська Ukrainian (45M)
+  | 'fil'  // Filipino (45M)
+  | 'kn'   // ಕನ್ನಡ Kannada (44M)
+  | 'ml'   // മലയാളം Malayalam (38M)
+  | 'my'   // မြန်မာ Burmese (33M)
+  // Tier 5: European & strategic
+  | 'nl'   // Nederlands Dutch (25M)
+  | 'ro'   // Română Romanian (24M)
+  | 'el'   // Ελληνικά Greek (13M)
+  | 'hu'   // Magyar Hungarian (13M)
+  | 'he';  // עברית Hebrew (9M)
+
+export type LanguageDetectionResult = SupportedLanguage | 'mixed' | 'unknown';
+
+/**
+ * Cultural adaptation profile
+ * Affects tone, pacing, directness beyond translation
+ */
+export interface CultureProfile {
+  language: SupportedLanguage;
+
+  // Communication style
+  directness: 'high' | 'medium' | 'low';      // DE high, JA low
+  formality: 'formal' | 'neutral' | 'casual'; // AR formal, EN casual
+  emotionality: 'expressive' | 'moderate' | 'reserved'; // ES expressive, DE reserved
+
+  // Interaction patterns
+  silence_comfort: 'high' | 'medium' | 'low'; // JA high, ES low
+  hierarchy_respect: 'high' | 'medium' | 'low'; // HI high, EN low
+
+  // Script direction (for future UI)
+  rtl: boolean; // AR, UR = true
+}
+
+/**
+ * Default culture profiles for each language
+ */
+export const CULTURE_PROFILES: Record<SupportedLanguage, CultureProfile> = {
+  // Tier 1
+  en: { language: 'en', directness: 'high', formality: 'casual', emotionality: 'moderate', silence_comfort: 'low', hierarchy_respect: 'low', rtl: false },
+  zh: { language: 'zh', directness: 'medium', formality: 'formal', emotionality: 'reserved', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  hi: { language: 'hi', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  es: { language: 'es', directness: 'medium', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'low', hierarchy_respect: 'medium', rtl: false },
+  // Tier 2
+  fr: { language: 'fr', directness: 'medium', formality: 'formal', emotionality: 'moderate', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  ar: { language: 'ar', directness: 'low', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: true },
+  bn: { language: 'bn', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  pt: { language: 'pt', directness: 'medium', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'low', hierarchy_respect: 'medium', rtl: false },
+  ru: { language: 'ru', directness: 'high', formality: 'neutral', emotionality: 'reserved', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  ur: { language: 'ur', directness: 'low', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: true },
+  id: { language: 'id', directness: 'low', formality: 'formal', emotionality: 'moderate', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  // Tier 3
+  de: { language: 'de', directness: 'high', formality: 'formal', emotionality: 'reserved', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  ja: { language: 'ja', directness: 'low', formality: 'formal', emotionality: 'reserved', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  pa: { language: 'pa', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  sw: { language: 'sw', directness: 'medium', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  mr: { language: 'mr', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  tr: { language: 'tr', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  vi: { language: 'vi', directness: 'low', formality: 'formal', emotionality: 'reserved', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  ko: { language: 'ko', directness: 'low', formality: 'formal', emotionality: 'reserved', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  te: { language: 'te', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  ta: { language: 'ta', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  fa: { language: 'fa', directness: 'low', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: true },
+  ms: { language: 'ms', directness: 'low', formality: 'formal', emotionality: 'moderate', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  ha: { language: 'ha', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  // Tier 4
+  it: { language: 'it', directness: 'medium', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'low', hierarchy_respect: 'medium', rtl: false },
+  th: { language: 'th', directness: 'low', formality: 'formal', emotionality: 'reserved', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  am: { language: 'am', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  gu: { language: 'gu', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  yo: { language: 'yo', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  pl: { language: 'pl', directness: 'high', formality: 'neutral', emotionality: 'moderate', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  uk: { language: 'uk', directness: 'high', formality: 'neutral', emotionality: 'moderate', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  fil: { language: 'fil', directness: 'low', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  kn: { language: 'kn', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  ml: { language: 'ml', directness: 'medium', formality: 'formal', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'high', rtl: false },
+  my: { language: 'my', directness: 'low', formality: 'formal', emotionality: 'reserved', silence_comfort: 'high', hierarchy_respect: 'high', rtl: false },
+  // Tier 5
+  nl: { language: 'nl', directness: 'high', formality: 'casual', emotionality: 'moderate', silence_comfort: 'low', hierarchy_respect: 'low', rtl: false },
+  ro: { language: 'ro', directness: 'medium', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  el: { language: 'el', directness: 'medium', formality: 'neutral', emotionality: 'expressive', silence_comfort: 'low', hierarchy_respect: 'medium', rtl: false },
+  hu: { language: 'hu', directness: 'high', formality: 'neutral', emotionality: 'reserved', silence_comfort: 'medium', hierarchy_respect: 'medium', rtl: false },
+  he: { language: 'he', directness: 'high', formality: 'casual', emotionality: 'expressive', silence_comfort: 'low', hierarchy_respect: 'low', rtl: true },
+};
+
+// ============================================
 // DOMAIN ONTOLOGY
 // ============================================
 
@@ -171,7 +299,7 @@ export interface FieldState {
   uncertainty: number;  // 0-1
   
   // Language detected
-  language?: 'en' | 'it' | 'mixed';
+  language?: LanguageDetectionResult;
 }
 
 // ============================================

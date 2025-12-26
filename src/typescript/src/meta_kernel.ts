@@ -6,7 +6,7 @@
  * Ensures power is permissioned, not automatic.
  */
 
-import { Depth, Pacing } from './types';
+import { Depth, Pacing, SupportedLanguage } from './types';
 
 // ============================================
 // TYPES
@@ -299,11 +299,67 @@ const METAKERNEL_RULES: MetaKernelRule[] = [
 // HANDSHAKE
 // ============================================
 
-const HANDSHAKE_MESSAGES = {
+const HANDSHAKE_MESSAGES: Partial<Record<SupportedLanguage, string>> = {
   en: `You're moving into deeper territory—exploring meaning, identity, or core patterns. This kind of work can be valuable but also intense.
 
 Would you like to continue into this space?`,
-  
+
+  zh: `你正在进入更深的领域——探索意义、身份或核心模式。这种工作可能很有价值，但也很强烈。
+
+你想继续进入这个空间吗？`,
+
+  hi: `आप गहरे क्षेत्र में जा रहे हैं—अर्थ, पहचान, या मूल पैटर्न का अन्वेषण कर रहे हैं। इस तरह का काम मूल्यवान हो सकता है लेकिन तीव्र भी।
+
+क्या आप इस स्थान में जारी रखना चाहते हैं?`,
+
+  es: `Estás entrando en territorio más profundo—explorando significado, identidad o patrones fundamentales. Este tipo de trabajo puede ser valioso pero también intenso.
+
+¿Te gustaría continuar en este espacio?`,
+
+  fr: `Vous entrez dans un territoire plus profond—explorant le sens, l'identité ou les schémas fondamentaux. Ce type de travail peut être précieux mais aussi intense.
+
+Souhaitez-vous continuer dans cet espace?`,
+
+  ar: `أنت تتحرك نحو منطقة أعمق—تستكشف المعنى والهوية والأنماط الأساسية. هذا النوع من العمل يمكن أن يكون قيماً ولكنه أيضاً مكثف.
+
+هل تريد الاستمرار في هذا المجال؟`,
+
+  bn: `আপনি গভীর অঞ্চলে যাচ্ছেন—অর্থ, পরিচয়, বা মূল প্যাটার্ন অন্বেষণ করছেন। এই ধরনের কাজ মূল্যবান হতে পারে কিন্তু তীব্রও।
+
+আপনি কি এই স্থানে চালিয়ে যেতে চান?`,
+
+  ru: `Вы входите в более глубокую территорию—исследуя смысл, идентичность или основные паттерны. Такая работа может быть ценной, но также интенсивной.
+
+Хотите продолжить в этом пространстве?`,
+
+  pt: `Você está entrando em território mais profundo—explorando significado, identidade ou padrões fundamentais. Este tipo de trabalho pode ser valioso, mas também intenso.
+
+Gostaria de continuar neste espaço?`,
+
+  id: `Anda bergerak ke wilayah yang lebih dalam—mengeksplorasi makna, identitas, atau pola inti. Jenis pekerjaan ini bisa berharga tetapi juga intens.
+
+Apakah Anda ingin melanjutkan ke ruang ini?`,
+
+  ur: `آپ گہرے علاقے میں جا رہے ہیں—معنی، شناخت، یا بنیادی نمونوں کی تلاش کر رہے ہیں۔ اس قسم کا کام قیمتی ہو سکتا ہے لیکن شدید بھی۔
+
+کیا آپ اس جگہ میں جاری رکھنا چاہیں گے؟`,
+
+  de: `Sie betreten tieferes Terrain—erkunden Bedeutung, Identität oder grundlegende Muster. Diese Art von Arbeit kann wertvoll, aber auch intensiv sein.
+
+Möchten Sie in diesem Raum fortfahren?`,
+
+  ja: `あなたはより深い領域に入ろうとしています—意味、アイデンティティ、または核心的なパターンを探求しています。この種の作業は価値がありますが、強烈でもあります。
+
+この空間に進みますか？`,
+
+  sw: `Unaingia eneo la kina zaidi—kuchunguza maana, utambulisho, au mifumo ya msingi. Aina hii ya kazi inaweza kuwa ya thamani lakini pia yenye nguvu.
+
+Je, ungependa kuendelea katika nafasi hii?`,
+
+  mr: `तुम्ही अधिक खोल प्रदेशात जात आहात—अर्थ, ओळख किंवा मूळ नमुने शोधत आहात. या प्रकारचे काम मौल्यवान असू शकते पण तीव्र देखील।
+
+तुम्हाला या जागेत पुढे जायचे आहे का?`,
+
   it: `Stai entrando in territorio più profondo—esplorando significato, identità, o pattern fondamentali. Questo tipo di lavoro può essere prezioso ma anche intenso.
 
 Vuoi continuare in questo spazio?`,
@@ -337,7 +393,7 @@ export function applyMetaKernel(
   sessionTelemetry: SessionTelemetry,
   turnTelemetry: TurnTelemetry | null,
   currentState: MetaKernelState | null,
-  language: 'en' | 'it' = 'en'
+  language: SupportedLanguage = 'en'
 ): MetaKernelResult {
   // Initialize state if needed
   const state = currentState || createDefaultState();
@@ -432,7 +488,7 @@ export function applyMetaKernel(
     knob_changes,
     power_envelope,
     prompt_handshake: needsHandshake,
-    handshake_message: needsHandshake ? HANDSHAKE_MESSAGES[language] : undefined,
+    handshake_message: needsHandshake ? (HANDSHAKE_MESSAGES[language] || HANDSHAKE_MESSAGES.en) : undefined,
     new_state,
   };
 }
