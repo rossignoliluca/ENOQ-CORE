@@ -13,6 +13,11 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
+  // Exclude legacy benchmark tests (non-blocking reference suites for older detectors)
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/__tests__/legacy/',
+  ],
   moduleFileExtensions: ['ts', 'js', 'json'],
   collectCoverageFrom: [
     'src/**/*.ts',

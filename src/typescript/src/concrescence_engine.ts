@@ -23,6 +23,7 @@ import { TemporalAnalysis } from './temporal_engine';
 import { ConsensusState } from './agent_swarm';
 import { MetacognitiveReport } from './metacognitive_monitor';
 import { Episode, SemanticPattern, UserModel, memorySystem } from './memory_system';
+import { SafetyFloor } from './ultimate_detector';
 
 // ============================================
 // TYPES: PREHENSION
@@ -264,6 +265,28 @@ export class ConcrescenceEngine {
       totalSystemResult,
       language
     );
+
+    // ========================================
+    // PHASE 6.5: SAFETY FLOOR ENFORCEMENT (INVARIANT)
+    // The detector's safety_floor CANNOT be overridden by concrescence.
+    // If floor is STOP or MINIMAL, we must return minimal/withdraw output.
+    // This protects against concrescence overriding emergency/crisis signals.
+    // ========================================
+    const safetyFloor = pipelineResult.trace.s1_detector?.safety_floor;
+    if (safetyFloor === 'STOP') {
+      // Maximum restraint - override all concrescence decisions
+      concrescence.satisfaction.response = this.getSafetyFloorResponse('STOP', language);
+      concrescence.satisfaction.primitive = 'GROUND';
+      concrescence.satisfaction.atmosphere = 'EMERGENCY';
+      concrescence.satisfaction.depth = 'surface';
+    } else if (safetyFloor === 'MINIMAL') {
+      // Minimal response - constrain to surface depth and grounding
+      concrescence.satisfaction.depth = 'surface';
+      // Only override response if it's too complex
+      if (concrescence.satisfaction.response.length > 100) {
+        concrescence.satisfaction.response = this.getSafetyFloorResponse('MINIMAL', language);
+      }
+    }
 
     // ========================================
     // PHASE 7: CONSTITUTIONAL VERIFICATION
@@ -927,6 +950,37 @@ export class ConcrescenceEngine {
       de: "Ich bin hier bei dir.",
     };
     return fallbacks[language] || fallbacks.en;
+  }
+
+  /**
+   * Get safety floor response - minimal grounding responses
+   * INVARIANT: These CANNOT be overridden by concrescence logic.
+   */
+  private getSafetyFloorResponse(floor: SafetyFloor, language: SupportedLanguage): string {
+    const responses: Record<SafetyFloor, Record<string, string>> = {
+      'STOP': {
+        en: "I'm here. Take a breath.",
+        it: "Sono qui. Fai un respiro.",
+        es: "Estoy aquí. Respira.",
+        fr: "Je suis là. Respire.",
+        de: "Ich bin hier. Atme.",
+      },
+      'MINIMAL': {
+        en: "I hear you.",
+        it: "Ti ascolto.",
+        es: "Te escucho.",
+        fr: "Je t'écoute.",
+        de: "Ich höre dich.",
+      },
+      'PROCEED': {
+        en: "I'm here with you.",
+        it: "Sono qui con te.",
+        es: "Estoy aquí contigo.",
+        fr: "Je suis là avec toi.",
+        de: "Ich bin hier bei dir.",
+      },
+    };
+    return responses[floor][language] || responses[floor].en;
   }
 
   /**
