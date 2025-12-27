@@ -722,9 +722,18 @@ const LANGUAGE_MARKERS: LanguageMarkerSet[] = [
   {
     lang: 'it',
     markers: [
+      // Common function words (high frequency)
       /\b(il|lo|la|i|gli|le|un|uno|una|è|sono|ha|hanno|e|o|ma|perché|che|come|cosa|chi|dove|quando)\b/i,
+      // Pronouns
       /\b(io|tu|lui|lei|noi|voi|loro|mio|tuo|suo|questo|quello)\b/i,
+      // Greetings and common phrases
       /\b(ciao|grazie|prego|scusa|aiuto|dimmi|parlami)\b/i,
+      // Italian-specific words (not in French/Spanish)
+      /\b(non|so|se|fare|lavoro|restare|andare|essere|avere|stare|sentire|capire)\b/i,
+      /\b(perché|però|quindi|allora|adesso|sempre|mai|molto|poco|tutto|niente|qualcosa)\b/i,
+      /\b(voglio|posso|devo|vorrei|potrei|dovrei|sento|penso|credo|sembra)\b/i,
+      /\b(della|dello|delle|degli|nel|nella|nello|nelle|negli|sul|sulla|sullo)\b/i,
+      // Accented vowels typical of Italian
       /[àèéìíòóùú]/i,
     ],
   },
@@ -926,6 +935,30 @@ function detectLanguage(message: string): LanguageDetectionResult {
     // Spanish-specific
     if (/\b(usted|ustedes|también|entonces|siempre|nunca)\b/i.test(message)) {
       return 'es';
+    }
+  }
+
+  // Italian vs French (share many cognates)
+  if ((detected[0][0] === 'it' && detected[1][0] === 'fr') ||
+      (detected[0][0] === 'fr' && detected[1][0] === 'it')) {
+    // Italian-specific words
+    if (/\b(non|sono|voglio|posso|devo|perché|però|cosa|fare|della|molto|sempre|adesso|allora|quindi|anche|solo|così|già|ancora|sto|stare|male|bene|ho|hai|abbiamo|sento|sentire|capire|capisco)\b/i.test(message)) {
+      return 'it';
+    }
+    // French-specific words
+    if (/\b(je|tu|nous|vous|ils|elles|ne|pas|oui|avec|dans|pour|sur|chez|très|bien|aussi|donc|mais|parce|suis|es|sommes|êtes|sont|ai|as|avons|avez|ont)\b/i.test(message)) {
+      return 'fr';
+    }
+    // Check for Italian double consonants (common)
+    if (/\b\w*(tt|pp|cc|ss|ll|nn|rr|mm|ff|zz)\w*\b/i.test(message)) {
+      return 'it';
+    }
+  }
+
+  // Italian fallback: if 'mixed' but contains strong Italian markers
+  if (detected.some(([lang, _]) => lang === 'it')) {
+    if (/\b(sto|stai|sta|stiamo|state|stanno|ho|hai|ha|abbiamo|avete|hanno|sono|sei|siamo|siete)\b/i.test(message)) {
+      return 'it';
     }
   }
 

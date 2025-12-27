@@ -470,7 +470,12 @@ export async function enoq(
   // Falls back to hybrid detector if ultimate not available
   // ==========================================
 
-  const language = session.memory.language_preference === 'auto' ? 'en' : session.memory.language_preference;
+  // Determine language: use detected language from L1, fallback to session preference
+  // This ensures Italian input on first turn gets Italian response
+  const detectedLang = s1_field.language && s1_field.language !== 'mixed' && s1_field.language !== 'unknown'
+    ? s1_field.language
+    : null;
+  const language = detectedLang || (session.memory.language_preference === 'auto' ? 'en' : session.memory.language_preference);
   let dimensionalState: DimensionalState;
   let detectorOutput: DetectorOutput | null = null;
 
