@@ -5,7 +5,8 @@
 > *Sistema Operativo Totale per l'Esistenza Umana*
 
 [![Release](https://img.shields.io/badge/release-v2.0.0-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.0.0)
-[![Tests](https://img.shields.io/badge/tests-204%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Tests](https://img.shields.io/badge/tests-258%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Gate](https://img.shields.io/badge/gate-0.1ms%20embedded-blue)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Accuracy](https://img.shields.io/badge/detector-100%25%20accuracy-brightgreen)](https://github.com/rossignoliluca/ENOQ-CORE)
 
 ---
@@ -97,6 +98,25 @@ Fallback ladder: REGENERATE → MEDIUM → SURFACE → PRESENCE
 
 ## New Architecture (Dec 2025)
 
+### Gate Embedded (L0)
+First-order boundary marker integrated locally — **zero network latency**.
+- Ported from [gate-runtime](https://github.com/rossignoliluca/gate-runtime)
+- Classification in **<0.2ms** (vs 50-200ms HTTP)
+- Works offline, no Docker required
+
+| Signal | Domain | Effect |
+|--------|--------|--------|
+| `D1_ACTIVE` | Physical need/danger | EMERGENCY atmosphere, surface depth |
+| `D2_ACTIVE` | Coordination disruption | HUMAN_FIELD atmosphere |
+| `D3_ACTIVE` | Decision blockage | DECISION atmosphere, map costs |
+| `D4_ACTIVE` | Boundary confusion | V_MODE atmosphere |
+| `NULL` | No perturbation | Proceed normally |
+
+```typescript
+// Pipeline config
+gate_mode: 'embedded' | 'http' | 'disabled'  // default: 'embedded'
+```
+
 ### Ultimate Detector
 Contrastive learning + embedding-based detection achieving **100% accuracy**.
 - V_MODE detection for existential questions
@@ -143,6 +163,7 @@ Gravitational field metaphor for response shaping:
 
 | File | Description | Tests |
 |------|-------------|-------|
+| `src/gate_embedded.ts` | L0 boundary marker | 54/54 |
 | `src/perception.ts` | Domain/arousal detection | 13/13 |
 | `src/selection.ts` | Mode/atmosphere routing | Built-in |
 | `src/domain_governor.ts` | Coexistence rules | Built-in |
@@ -189,6 +210,12 @@ npx jest constitutional_components   # AXIS + Dissipation
 **Input:** "Should I take the job in Singapore?"
 
 ```
+L0 Gate (0.14ms):
+  - Signal: D3_ACTIVE
+  - Reason: DOMAIN_SIGNAL
+  - Detected: [should i, or stay, take the job]
+  - Effect: atmosphere=DECISION, forbidden=[recommend]
+
 L1 Perception:
   - Domain: H06_MEANING (0.7), H09_ATTACHMENT (0.5)
   - Flag: delegation_attempt
@@ -246,17 +273,17 @@ Core templates exist in EN, IT, ES, FR, DE with fallback support.
 
 | Component | Status | Score |
 |-----------|--------|-------|
+| Gate Embedded | ✅ Production | **<0.2ms** latency, 54 tests |
 | Ultimate Detector | ✅ Production | **100% accuracy** (27/27) |
 | ConcrescenceEngine | ✅ Complete | Unified entry point |
 | Total System | ✅ Complete | 215 disciplines integrated |
 | Safety Floor | ✅ Enforced | STOP/MINIMAL/PROCEED |
-| L0 Gate | ✅ Production | 97.27% accuracy |
 | L1 Perception | ✅ Complete | 10/10 |
 | Domain Governor | ✅ Complete | 10/10 |
 | MetaKernel | ✅ Complete | 10/10 |
 | L2 Execution | ✅ Complete | 10/10 |
 | S5 Verify | ✅ Complete | 10/10 |
-| Test Suite | ✅ Passing | **204/204 tests** |
+| Test Suite | ✅ Passing | **258/258 tests** |
 
 ---
 
