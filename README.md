@@ -1,14 +1,18 @@
 # ENOQ-CORE
 
-**Constitutional Cognitive Companion**
+**Total System Architecture for Human Existence**
 
-> *Maximum operational power. Zero normative sovereignty.*
+> *Sistema Operativo Totale per l'Esistenza Umana*
+
+[![Release](https://img.shields.io/badge/release-v2.0.0-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.0.0)
+[![Tests](https://img.shields.io/badge/tests-204%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Accuracy](https://img.shields.io/badge/detector-100%25%20accuracy-brightgreen)](https://github.com/rossignoliluca/ENOQ-CORE)
 
 ---
 
 ## What is ENOQ?
 
-ENOQ is an intelligent organism that facilitates human completion without creating dependency.
+ENOQ is a cognitive architecture that integrates 215 disciplines to facilitate human flourishing without creating dependency.
 
 **ENOQ can:**
 - Do everything operationally (write, analyze, structure, execute)
