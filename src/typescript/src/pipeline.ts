@@ -40,6 +40,13 @@ import {
   GateClientConfig,
 } from './gate_client';
 import {
+  EmbeddedGate,
+  EmbeddedGateResult,
+  GateSignalEffect as EmbeddedGateEffect,
+  getEmbeddedGate,
+  interpretEmbeddedGateSignal,
+} from './gate_embedded';
+import {
   curveSelection,
   getFieldTraceInfo,
   FieldTraceInfo
@@ -59,15 +66,22 @@ import {
 // ============================================
 
 export interface PipelineConfig {
-  gate_enabled: boolean;
+  // Gate configuration
+  // 'embedded' = local classifier (default, zero latency)
+  // 'http' = remote gate-runtime service
+  // 'disabled' = skip gate entirely
+  gate_mode?: 'embedded' | 'http' | 'disabled';
+  gate_enabled: boolean;  // Deprecated: use gate_mode instead
   gate_url?: string;
   gate_timeout_ms?: number;
+
   // Ultimate Detector config (default: true for 100% accuracy)
   use_ultimate_detector?: boolean;
   ultimate_detector_debug?: boolean;
 }
 
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
+  gate_mode: 'embedded',  // Default to embedded (zero latency, no HTTP)
   gate_enabled: true,
   gate_url: process.env.GATE_RUNTIME_URL || 'http://localhost:3000',
   gate_timeout_ms: 1000,
@@ -374,16 +388,43 @@ export async function enoq(
 
   // ==========================================
   // S0.5: GATE (Pre-LLM Classification)
+  // Supports: embedded (local), http (remote), disabled
   // ==========================================
 
   let gateResult: GateResult | null = null;
   let gateEffect: GateSignalEffect = { proceed: true };
 
-  if (config.gate_enabled) {
+  // Determine gate mode (gate_mode takes precedence over gate_enabled)
+  const gateMode = config.gate_mode ?? (config.gate_enabled ? 'embedded' : 'disabled');
+
+  if (gateMode === 'embedded') {
+    // EMBEDDED GATE: Local classification, zero latency
+    const embeddedGate = getEmbeddedGate(true);
+    const embeddedResult = embeddedGate.classify(s0_input);
+
+    // Convert to GateResult format for compatibility
+    gateResult = {
+      signal: embeddedResult.signal,
+      reason_code: embeddedResult.reason_code,
+      request_id: `embedded_${Date.now()}`,
+      latency_ms: embeddedResult.latency_ms,
+    };
+    gateEffect = interpretEmbeddedGateSignal(embeddedResult.signal, embeddedResult.reason_code);
+
+    // Log Gate result for debugging
+    if (process.env.ENOQ_DEBUG) {
+      console.log(`[GATE:EMBEDDED] Signal: ${gateResult.signal}, Reason: ${gateResult.reason_code}, Latency: ${gateResult.latency_ms.toFixed(2)}ms`);
+      if (embeddedResult.signals_detected.length > 0) {
+        console.log(`[GATE:EMBEDDED] Signals: ${embeddedResult.signals_detected.join(', ')}`);
+      }
+    }
+
+  } else if (gateMode === 'http') {
+    // HTTP GATE: Remote gate-runtime service
     const gateClient = session.gate_client || getGateClient({
       base_url: config.gate_url,
       timeout_ms: config.gate_timeout_ms,
-      enabled: config.gate_enabled,
+      enabled: true,
     });
 
     try {
@@ -392,20 +433,26 @@ export async function enoq(
 
       // Log Gate result for debugging
       if (process.env.ENOQ_DEBUG) {
-        console.log(`[GATE] Signal: ${gateResult.signal}, Reason: ${gateResult.reason_code}, Latency: ${gateResult.latency_ms}ms`);
+        console.log(`[GATE:HTTP] Signal: ${gateResult.signal}, Reason: ${gateResult.reason_code}, Latency: ${gateResult.latency_ms}ms`);
       }
     } catch (error) {
-      // Gate failure is non-fatal - proceed with ENOQ
-      console.warn('[GATE] Classification failed, proceeding with ENOQ:', error);
+      // HTTP Gate failure - fallback to embedded
+      console.warn('[GATE:HTTP] Classification failed, falling back to embedded:', error);
+
+      const embeddedGate = getEmbeddedGate(true);
+      const embeddedResult = embeddedGate.classify(s0_input);
+
       gateResult = {
-        signal: 'NULL',
-        reason_code: 'UNCLASSIFIABLE',
-        request_id: 'gate-error',
-        latency_ms: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        signal: embeddedResult.signal,
+        reason_code: embeddedResult.reason_code,
+        request_id: `embedded_fallback_${Date.now()}`,
+        latency_ms: embeddedResult.latency_ms,
+        error: error instanceof Error ? error.message : 'HTTP gate failed, used embedded fallback',
       };
+      gateEffect = interpretEmbeddedGateSignal(embeddedResult.signal, embeddedResult.reason_code);
     }
   }
+  // gateMode === 'disabled': gateResult stays null, gateEffect stays { proceed: true }
 
   // ==========================================
   // S1: SENSE (Perceive + Governor + MetaKernel)
