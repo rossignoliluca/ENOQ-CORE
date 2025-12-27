@@ -4,8 +4,9 @@
 
 > *Sistema Operativo Totale per l'Esistenza Umana*
 
-[![Release](https://img.shields.io/badge/release-v2.1.2-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.1.2)
-[![Tests](https://img.shields.io/badge/tests-258%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Release](https://img.shields.io/badge/release-v2.2.0-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.2.0)
+[![Tests](https://img.shields.io/badge/tests-282%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Persistence](https://img.shields.io/badge/memory-SQLite-blue)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Gate](https://img.shields.io/badge/gate-0.1ms%20embedded-blue)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Accuracy](https://img.shields.io/badge/detector-100%25%20accuracy-brightgreen)](https://github.com/rossignoliluca/ENOQ-CORE)
 
