@@ -16,7 +16,7 @@ import { createENOQ, field } from './genesis';
 import { GrownSystem } from './genesis/grow';
 import { SystemState } from './genesis/energy';
 import { OpenAIConnector, GenerationResult } from './genesis/llm';
-import { getMemorySystem } from './memory_system';
+import { getRegulatoryStore } from './regulatory_store';
 
 // ============================================
 // CONFIGURATION
@@ -209,8 +209,8 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     if (path === '/healthz') {
       let dbStatus: 'ok' | 'degraded' | 'error' = 'ok';
       try {
-        const memorySystem = getMemorySystem();
-        memorySystem.getStats(); // Test DB access
+        const store = getRegulatoryStore();
+        store.getStats(); // Test DB access
       } catch {
         dbStatus = 'error';
       }
@@ -219,7 +219,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
       sendJSON(res, {
         ok: isHealthy,
-        version: '2.2.0',
+        version: '2.3.0',
         uptime: Math.floor(process.uptime()),
         db: dbStatus,
         detector_ready: true,
@@ -364,10 +364,10 @@ function shutdown(): void {
   server.close(() => {
     console.log('HTTP server closed');
 
-    // Close memory system
-    const memorySystem = getMemorySystem();
-    memorySystem.close();
-    console.log('Memory system closed');
+    // Close regulatory store
+    const store = getRegulatoryStore();
+    store.close();
+    console.log('Regulatory store closed');
 
     process.exit(0);
   });

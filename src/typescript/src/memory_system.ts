@@ -20,7 +20,7 @@
  */
 
 import { FieldState, HumanDomain, SupportedLanguage } from './types';
-import { MemoryPersistence, PersistenceConfig } from './memory_persistence';
+import { getRegulatoryStore, RegulatoryState, createDefaultState } from './regulatory_store';
 
 // ============================================
 // TYPES
@@ -525,20 +525,18 @@ export class NeocorticalMemory {
 // ============================================
 
 export interface MemorySystemConfig {
-  /** Enable SQLite persistence */
-  persistence_enabled: boolean;
-  /** Persistence configuration (only used if persistence_enabled) */
-  persistence_config?: Partial<PersistenceConfig>;
-  /** Max episodes to keep per user */
+  /** Max episodes to keep per user (in-memory) */
   max_episodes_per_user: number;
   /** Auto-consolidation interval in ms (0 = disabled) */
   auto_consolidation_interval: number;
+  /** Enable regulatory state persistence (minimal, ENOQ-compliant) */
+  regulatory_persistence: boolean;
 }
 
 export const DEFAULT_MEMORY_CONFIG: MemorySystemConfig = {
-  persistence_enabled: false,
   max_episodes_per_user: 100,
-  auto_consolidation_interval: 0
+  auto_consolidation_interval: 0,
+  regulatory_persistence: true  // Only stores potency/withdrawal/autonomy
 };
 
 // ============================================
@@ -548,7 +546,6 @@ export const DEFAULT_MEMORY_CONFIG: MemorySystemConfig = {
 export class MemorySystem {
   private hippocampus: HippocampalBuffer;
   private neocortex: NeocorticalMemory;
-  private persistence: MemoryPersistence | null = null;
   private config: MemorySystemConfig;
   private replayInterval: NodeJS.Timeout | null = null;
 
@@ -557,11 +554,6 @@ export class MemorySystem {
     this.hippocampus = new HippocampalBuffer();
     this.neocortex = new NeocorticalMemory();
 
-    // Initialize persistence if enabled
-    if (this.config.persistence_enabled) {
-      this.persistence = new MemoryPersistence(this.config.persistence_config);
-    }
-
     // Start auto-consolidation if configured
     if (this.config.auto_consolidation_interval > 0) {
       this.startAutoConsolidation(this.config.auto_consolidation_interval);
@@ -569,14 +561,43 @@ export class MemorySystem {
   }
 
   /**
-   * Check if persistence is enabled
+   * Get regulatory state for user (cross-session, minimal)
    */
-  isPersistenceEnabled(): boolean {
-    return this.persistence !== null && this.persistence.isInitialized();
+  getRegulatoryState(user_id: string): RegulatoryState {
+    if (!this.config.regulatory_persistence) {
+      return createDefaultState(user_id);
+    }
+
+    const store = getRegulatoryStore();
+    const state = store.get(user_id);
+    return state || createDefaultState(user_id);
   }
 
   /**
-   * Store new interaction
+   * Update regulatory state (cross-session, minimal)
+   */
+  updateRegulatoryState(
+    user_id: string,
+    delta: Partial<Omit<RegulatoryState, 'subject_id'>>
+  ): void {
+    if (!this.config.regulatory_persistence) return;
+
+    const store = getRegulatoryStore();
+    const existing = store.get(user_id);
+
+    if (existing) {
+      store.update(user_id, {
+        ...delta,
+        last_interaction: Date.now()
+      });
+    } else {
+      const newState = createDefaultState(user_id);
+      store.save({ ...newState, ...delta });
+    }
+  }
+
+  /**
+   * Store new interaction (in-memory only, no content persisted)
    */
   store(
     user_id: string,
@@ -600,42 +621,43 @@ export class MemorySystem {
       primitive_used: primitive,
       response,
       outcome: {
-        engagement_continued: true,  // Default, updated later
+        engagement_continued: true,
         topic_shifted: false,
         user_corrected: false,
         autonomy_expressed: false
       },
-      novelty_score: 0,  // Computed during store
+      novelty_score: 0,
       emotional_salience: this.estimateSalience(fieldState, atmosphere),
       integration_score: 0
     };
 
-    // Store in-memory (hippocampal buffer)
+    // Store in-memory only (no persistence of content)
     this.hippocampus.store(episode);
 
-    // Persist to SQLite if enabled
-    if (this.persistence) {
-      this.persistence.storeEpisode(episode);
-      this.persistence.updateLastInteraction(user_id);
-    }
+    // Update regulatory state (minimal, cross-session)
+    this.updateRegulatoryState(user_id, {
+      last_interaction: Date.now()
+    });
 
     return episode.id;
   }
 
   /**
-   * Update episode outcome (implicit feedback)
+   * Update episode outcome (implicit feedback, in-memory only)
    */
   updateOutcome(episode_id: string, user_id: string, outcome: Partial<EpisodeOutcome>): void {
-    // Update in-memory
     const episodes = this.hippocampus.getWorkingMemory(user_id);
     const episode = episodes.find(e => e.id === episode_id);
     if (episode) {
       Object.assign(episode.outcome, outcome);
-    }
 
-    // Persist update
-    if (this.persistence) {
-      this.persistence.updateEpisodeOutcome(episode_id, outcome);
+      // Update autonomy slope in regulatory state
+      if (outcome.autonomy_expressed) {
+        const regState = this.getRegulatoryState(user_id);
+        this.updateRegulatoryState(user_id, {
+          autonomy_slope: regState.autonomy_slope + 0.01
+        });
+      }
     }
   }
 
@@ -647,29 +669,13 @@ export class MemorySystem {
     user_model: UserModel;
     effective_strategies: SemanticPattern[];
     autonomy_health: { healthy: boolean; trajectory: number; recommendation: string };
+    regulatory_state: RegulatoryState;
   } {
-    // Get working memory (prefer in-memory, fallback to persistence)
-    let working_memory = this.hippocampus.getWorkingMemory(user_id);
+    const working_memory = this.hippocampus.getWorkingMemory(user_id);
+    const user_model = this.neocortex.getModel(user_id);
+    const autonomy_health = this.neocortex.checkAutonomyHealth(user_id);
+    const regulatory_state = this.getRegulatoryState(user_id);
 
-    // If in-memory is empty but persistence exists, load from DB
-    if (working_memory.length === 0 && this.persistence) {
-      working_memory = this.persistence.getRecentEpisodes(user_id, 10);
-    }
-
-    // Get user model (prefer in-memory, fallback to persistence)
-    let user_model = this.neocortex.getModel(user_id);
-    let autonomy_health = this.neocortex.checkAutonomyHealth(user_id);
-
-    // If using persistence and model is fresh (no patterns), load from DB
-    if (this.persistence && user_model.semantic_patterns.length === 0) {
-      const persistedModel = this.persistence.getUserModel(user_id);
-      if (persistedModel.semantic_patterns.length > 0) {
-        user_model = persistedModel;
-        autonomy_health = this.persistence.checkAutonomyHealth(user_id);
-      }
-    }
-
-    // Get currently active domains from working memory
     const active_domains = new Set<HumanDomain>();
     for (const ep of working_memory.slice(-3)) {
       for (const d of ep.domains_active) {
@@ -677,8 +683,7 @@ export class MemorySystem {
       }
     }
 
-    // Get effective strategies (prefer in-memory, with persistence fallback)
-    let effective_strategies = this.neocortex.getEffectiveStrategies(
+    const effective_strategies = this.neocortex.getEffectiveStrategies(
       user_id,
       {
         domains: Array.from(active_domains),
@@ -686,24 +691,17 @@ export class MemorySystem {
       }
     );
 
-    // If no strategies found and persistence exists, try DB
-    if (effective_strategies.length === 0 && this.persistence) {
-      effective_strategies = this.persistence.getEffectivePatterns(
-        user_id,
-        Array.from(active_domains)
-      );
-    }
-
     return {
       working_memory,
       user_model,
       effective_strategies,
-      autonomy_health
+      autonomy_health,
+      regulatory_state
     };
   }
 
   /**
-   * Retrieve similar past interactions
+   * Retrieve similar past interactions (in-memory only)
    */
   retrieveSimilar(
     user_id: string,
@@ -713,29 +711,22 @@ export class MemorySystem {
   }
 
   /**
-   * Trigger consolidation (call during idle time)
+   * Trigger consolidation (in-memory only)
    */
   consolidate(user_id: string): void {
     const episodes = this.hippocampus.getForReplay(user_id);
     this.neocortex.consolidate(episodes);
-
-    // Persist the updated user model
-    if (this.persistence) {
-      const model = this.neocortex.getModel(user_id);
-      this.persistence.saveUserModel(model);
-
-      // Prune old episodes if needed
-      this.persistence.pruneEpisodes(user_id, this.config.max_episodes_per_user);
-    }
   }
 
   /**
-   * Start automatic consolidation (simulates sleep)
+   * Start automatic consolidation
    */
   startAutoConsolidation(interval_ms: number = 60000): void {
     this.replayInterval = setInterval(() => {
-      // Consolidate all active users
-      // In production, this would be smarter about which users to consolidate
+      // Consolidate and purge expired regulatory states
+      if (this.config.regulatory_persistence) {
+        getRegulatoryStore().purgeExpired();
+      }
     }, interval_ms);
   }
 
@@ -753,74 +744,58 @@ export class MemorySystem {
    * Estimate emotional salience from field state
    */
   private estimateSalience(fieldState: FieldState, atmosphere: string): number {
-    let salience = 0.5;  // Baseline
-
-    // Emergency = high salience
+    let salience = 0.5;
     if (atmosphere === 'EMERGENCY') salience = 1.0;
-
-    // V_MODE = high salience (existential content)
     if (atmosphere === 'V_MODE') salience = 0.9;
-
-    // High arousal = high salience
     if (fieldState.arousal === 'high') salience = Math.max(salience, 0.8);
-
     return salience;
   }
 
   /**
-   * Get persistence statistics
+   * Get statistics
    */
   getStats(): {
-    persistence_enabled: boolean;
-    episode_count?: number;
-    user_count?: number;
-    pattern_count?: number;
+    regulatory_persistence: boolean;
+    subjects?: number;
     db_size_bytes?: number;
   } {
-    if (!this.persistence) {
-      return { persistence_enabled: false };
+    if (!this.config.regulatory_persistence) {
+      return { regulatory_persistence: false };
     }
 
-    const stats = this.persistence.getStats();
+    const stats = getRegulatoryStore().getStats();
     return {
-      persistence_enabled: true,
-      ...stats
+      regulatory_persistence: true,
+      subjects: stats.subjects,
+      db_size_bytes: stats.dbSizeBytes
     };
   }
 
   /**
-   * Export user data (GDPR compliance)
-   */
-  exportUserData(user_id: string): {
-    episodes: Episode[];
-    model: UserModel;
-    patterns: SemanticPattern[];
-  } | null {
-    if (!this.persistence) {
-      return null;
-    }
-    return this.persistence.exportUserData(user_id);
-  }
-
-  /**
-   * Delete user data (GDPR compliance)
+   * Delete user regulatory data (GDPR)
    */
   deleteUserData(user_id: string): boolean {
-    if (!this.persistence) {
-      return false;
-    }
-    this.persistence.deleteUserData(user_id);
+    if (!this.config.regulatory_persistence) return false;
+    getRegulatoryStore().delete(user_id);
     return true;
   }
 
   /**
-   * Close persistence connection
+   * Export user regulatory data (GDPR)
+   * Note: Only regulatory state, no content
+   */
+  exportUserData(user_id: string): RegulatoryState | null {
+    if (!this.config.regulatory_persistence) return null;
+    return getRegulatoryStore().get(user_id);
+  }
+
+  /**
+   * Close connections
    */
   close(): void {
     this.stopAutoConsolidation();
-    if (this.persistence) {
-      this.persistence.close();
-      this.persistence = null;
+    if (this.config.regulatory_persistence) {
+      getRegulatoryStore().close();
     }
   }
 }
