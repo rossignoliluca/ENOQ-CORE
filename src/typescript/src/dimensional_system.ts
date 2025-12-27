@@ -71,12 +71,16 @@ const VERTICAL_MARKERS: Record<VerticalDimension, {
   phrases: RegExp[];
   semantic_fields: string[];
 }> = {
+  // SOMATIC: Body sensations, physical states, health
+  // Common pain expressions: "mi fa male" (IT), "me duele" (ES), "hurts" (EN)
   SOMATIC: {
     keywords: [
       /body|corpo|cuerpo|身体|शरीर/i,
       /tired|stanco|cansado|疲れ|थका/i,
       /energy|energia|energía|エネルギー|ऊर्जा/i,
       /pain|dolore|dolor|痛み|दर्द/i,
+      /hurt|male|duele|fa male|me duele/i,  // Common pain expressions
+      /head|testa|cabeza|頭|सिर/i,  // Body parts
       /sleep|dormire|dormir|眠り|नींद/i,
       /health|salute|salud|健康|स्वास्थ्य/i,
       /breathe|respirare|respirar|呼吸|सांस/i,
