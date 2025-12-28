@@ -4,8 +4,10 @@
 
 > *Sistema Operativo Totale per l'Esistenza Umana*
 
-[![Release](https://img.shields.io/badge/release-v2.5.2-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.5.2)
-[![Tests](https://img.shields.io/badge/tests-412%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Release](https://img.shields.io/badge/release-v3.1-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v3.1)
+[![Tests](https://img.shields.io/badge/tests-555%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![ADS](https://img.shields.io/badge/ADS-delegation%20detection-purple)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Observer](https://img.shields.io/badge/2nd%20Order-enchantment%20cooling-orange)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Stochastic](https://img.shields.io/badge/dynamics-Langevin%20%2B%20O--U-purple)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Curvature](https://img.shields.io/badge/feedback-field%20→%20selection-orange)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Regulatory](https://img.shields.io/badge/regulatory-cross--session-blue)](https://github.com/rossignoliluca/ENOQ-CORE)
@@ -70,7 +72,13 @@ L1.5 STOCHASTIC FIELD (Langevin + O-U dynamics)
     ↓
 S3 SELECTION CURVER (field → selection feedback)
     ↓
-S3.57 REGULATORY CONSTRAINTS (cross-session state)   ← NEW v2.5.2
+S3.5 ADS DETECTOR (delegation → HARD constraints)   ← v3.1
+    ↓
+S3.6 SECOND ORDER OBSERVER (enchantment → SOFT)     ← v3.1
+    ↓
+S3.57 REGULATORY CONSTRAINTS (cross-session state)
+    ↓
+S3b PLAN+ACT VERIFIER (rulepacks A-D)               ← v3.1
     ↓
 L2 EXECUTION (multi-domain, blind)
     ↓
@@ -106,6 +114,48 @@ Cross-session autonomy tracking. Prevents dependency formation.
 - **Withdrawal bias**: Increases as system should withdraw
 - **Delegation trend**: Tracks delegation attempts vs autonomous decisions
 - Constraints applied to selection based on accumulated state
+
+### ADS Detector (v3.1)
+**Avoidable Delegation Surprise** — measures when user could/should handle themselves.
+
+```
+ADS = avoidability × motive_weight × inertia
+```
+
+| Motive | Weight | Example |
+|--------|--------|---------|
+| genuine_incapacity | 0.0 | Emergency, crisis |
+| time_saving_tooling | 0.1 | Factual questions |
+| decision_avoidance | 0.9 | "Tell me what to do" |
+| emotional_offload | 0.6 | Delegating feelings |
+| habit | 0.7 | Repeated delegation |
+
+**HARD constraints only:** `disable_tools`, `must_require_user_effort`
+Emergency override: Never intervene on genuine crisis.
+
+### Second Order Observer (v3.1)
+Detects **enchantment** (user → system) and **counter-transference** (system → user).
+
+| Signal | Pattern | Example |
+|--------|---------|---------|
+| Idealization | User sees system as perfect | "You're the only one who understands" |
+| Anthropomorphism | User attributes feelings | "Do you feel sad too?" |
+| Comparison | Prefers system over humans | "Better than anyone else" |
+| Dependency | Attachment/need | "I need you, don't leave" |
+| System fusion | Over-empathy in responses | "I understand perfectly" |
+
+**SOFT constraints only:** `warmth_delta`, `brevity_delta`, `force_pronouns`
+Philosophy: **"Cooling without punishment"** — reduce fusion, don't cut care.
+
+### Policy Merge Chain
+```
+Base → ADS (HARD) → Second Order (SOFT) → PlanActVerifier
+```
+- OR for booleans (disable_tools, must_require_user_effort)
+- min for brevity_delta (more restrictive wins)
+- sum clamped for warmth_delta ([-1, +1])
+
+**Boundary invariant:** Second Order can NEVER set HARD constraints.
 
 ### S5 - Constitutional Enforcement
 Validates every output. Blocks violations.
