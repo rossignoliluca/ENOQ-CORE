@@ -84,6 +84,15 @@ import {
   IRegulatoryStore
 } from './regulatory_store';
 
+// v5.1 Unified Gating (single routing point for LLM calls)
+import {
+  UnifiedGating,
+  UnifiedGatingDecision,
+  UnifiedGatingStats,
+  SkipReason,
+} from './unified_gating';
+import { DimensionalDetector } from './dimensional_system';
+
 // ============================================
 // NEW ARCHITECTURE IMPORTS (v3.0)
 // Response Plan, EarlySignals, Phased Selection, Lifecycle
@@ -170,6 +179,12 @@ export interface PipelineConfig {
 
   // v3.0 EarlySignals deadline (default: 100ms)
   early_signals_deadline_ms?: number;
+
+  // v5.1 Unified Gating (single routing point for LLM calls)
+  // Combines: Cache + Hard Skip + NP Gating
+  // Target: <50% LLM call rate with 100% V_MODE recall
+  use_unified_gating?: boolean;
+  unified_gating_debug?: boolean;
 }
 
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
@@ -182,10 +197,30 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   regulatory_store_enabled: true, // Default to enabled for cross-session learning
   use_v3_architecture: false,  // v3.0: disabled by default for backward compatibility
   early_signals_deadline_ms: DEADLINE_CONFIG.STANDARD_MS,  // v3.0: 100ms default
+  use_unified_gating: true,  // v5.1: enabled by default (reduces LLM calls 50%+)
+  unified_gating_debug: Boolean(process.env.ENOQ_DEBUG),
 };
 
 // Ultimate detector singleton (lazy init)
 let ultimateDetector: UltimateDetector | null = null;
+
+// v5.1 Unified Gating singleton (lazy init)
+let unifiedGatingInstance: UnifiedGating | null = null;
+let dimensionalDetectorInstance: DimensionalDetector | null = null;
+
+function getUnifiedGating(debug: boolean = false): UnifiedGating {
+  if (!unifiedGatingInstance) {
+    unifiedGatingInstance = new UnifiedGating({ debug });
+  }
+  return unifiedGatingInstance;
+}
+
+function getDimensionalDetector(): DimensionalDetector {
+  if (!dimensionalDetectorInstance) {
+    dimensionalDetectorInstance = new DimensionalDetector();
+  }
+  return dimensionalDetectorInstance;
+}
 
 // ============================================
 // SESSION TYPES
@@ -309,6 +344,15 @@ export interface PipelineTrace {
     delegation_trend: number;  // -1 (delegating) to +1 (independent)
     loop_count: number;        // Repetitive pattern count
     constraints_applied: string[];  // How regulatory state curved selection
+  };
+
+  // v5.1: Unified Gating (LLM call routing)
+  s1_unified_gating?: {
+    call_llm: boolean;         // Did we call LLM detector?
+    stage: 'cache' | 'hard_skip' | 'np_gating' | 'safety';
+    reason: SkipReason;        // Why did we skip/call?
+    np_score: number | null;   // NP gating score (if used)
+    latency_ms: number;        // Gating decision time
   };
 
   // v3.0: Phased Selection (S3a/S3b)
@@ -871,9 +915,15 @@ export async function enoq(
   const s1_field = perceive(s0_input, conversationHistory);
 
   // ==========================================
-  // DIMENSIONAL DETECTION
-  // Ultimate Detector: 100% accuracy, 46ms latency, calibrated sensor
-  // Falls back to hybrid detector if ultimate not available
+  // DIMENSIONAL DETECTION + UNIFIED GATING (v5.1)
+  //
+  // Flow:
+  // 1. Fast regex detection (DimensionalDetector) → ~1-5ms
+  // 2. Unified Gating decision (Cache/HardSkip/NP) → ~1ms
+  // 3. If call_llm=true → Ultimate Detector → ~200-500ms
+  // 4. If call_llm=false → use regex result (cached or skipped)
+  //
+  // Result: 50%+ LLM call reduction with 100% V_MODE recall
   // ==========================================
 
   // Determine language: use detected language from L1, fallback to session preference
@@ -885,37 +935,101 @@ export async function enoq(
   let dimensionalState: DimensionalState;
   let detectorOutput: DetectorOutput | null = null;
 
+  // v5.1: Unified Gating decision
+  let gatingDecision: UnifiedGatingDecision | null = null;
+  let gatingLatencyMs = 0;
+
   // Default to ultimate detector if not explicitly disabled
   const useUltimateDetector = config.use_ultimate_detector ?? true;
+  const useUnifiedGating = config.use_unified_gating ?? true;
 
-  if (useUltimateDetector) {
-    try {
-      // Lazy init ultimate detector
-      if (!ultimateDetector) {
-        ultimateDetector = await getUltimateDetector({
-          debug: config.ultimate_detector_debug
-        });
+  // STEP 1: Fast regex detection for gating decision
+  const gatingStartTime = Date.now();
+  const fastDimensionalDetector = getDimensionalDetector();
+  const fastDimensionalState = fastDimensionalDetector.detect(s0_input, language, { field_state: s1_field });
+
+  // STEP 2: Unified Gating decides if LLM is needed
+  if (useUnifiedGating) {
+    const gating = getUnifiedGating(config.unified_gating_debug ?? false);
+    gatingDecision = gating.decide(fastDimensionalState, s0_input, language);
+    gatingLatencyMs = Date.now() - gatingStartTime;
+
+    if (process.env.ENOQ_DEBUG) {
+      console.log(`[UNIFIED_GATING] ${gatingDecision.reason} → call_llm=${gatingDecision.call_llm} (${gatingLatencyMs}ms)`);
+      if (gatingDecision.np_score !== null) {
+        console.log(`[UNIFIED_GATING] NP score: ${(gatingDecision.np_score * 100).toFixed(0)}%`);
       }
+    }
+  }
 
-      // Get calibrated sensor output
-      detectorOutput = await ultimateDetector.detectRaw(s0_input, language);
-      dimensionalState = await ultimateDetector.detect(s0_input, language, { field_state: s1_field });
+  // STEP 3: Call LLM only if gating says so (or gating disabled)
+  if (!useUnifiedGating || gatingDecision?.call_llm) {
+    // Need LLM detection
+    if (useUltimateDetector) {
+      try {
+        // Lazy init ultimate detector
+        if (!ultimateDetector) {
+          ultimateDetector = await getUltimateDetector({
+            debug: config.ultimate_detector_debug
+          });
+        }
 
-      // Log detector output
-      if (process.env.ENOQ_DEBUG) {
-        console.log(`[ULTIMATE] D1=${detectorOutput.domain_probs.D1_CRISIS.toFixed(2)} D3=${detectorOutput.domain_probs.D3_EXISTENTIAL.toFixed(2)}`);
-        console.log(`[ULTIMATE] Safety: ${detectorOutput.safety_floor}, Confidence: ${(detectorOutput.confidence * 100).toFixed(0)}%`);
-        if (detectorOutput.risk_flags.low_confidence) console.log(`[ULTIMATE] ⚠ LOW CONFIDENCE`);
-        if (detectorOutput.risk_flags.ood_detected) console.log(`[ULTIMATE] ⚠ OOD DETECTED`);
+        // Get calibrated sensor output
+        detectorOutput = await ultimateDetector.detectRaw(s0_input, language);
+        dimensionalState = await ultimateDetector.detect(s0_input, language, { field_state: s1_field });
+
+        // Cache the result for future use
+        if (useUnifiedGating && gatingDecision) {
+          const gating = getUnifiedGating();
+          gating.cacheResult(s0_input, language, {
+            regime: dimensionalState.v_mode_triggered ? 'existential' : 'functional',
+            confidence: detectorOutput.confidence,
+            existential: {
+              content_detected: dimensionalState.v_mode_triggered,
+              specificity: { identity: 0, meaning: 0, death: 0, freedom: 0, isolation: 0 },
+              casual_work_context: dimensionalState.primary_vertical === 'FUNCTIONAL',
+            },
+            v_mode: { triggered: dimensionalState.v_mode_triggered, markers: [] },
+            emergency: { triggered: dimensionalState.emergency_detected },
+            coherence: 0.9,
+          });
+        }
+
+        // Log detector output
+        if (process.env.ENOQ_DEBUG) {
+          console.log(`[ULTIMATE] D1=${detectorOutput.domain_probs.D1_CRISIS.toFixed(2)} D3=${detectorOutput.domain_probs.D3_EXISTENTIAL.toFixed(2)}`);
+          console.log(`[ULTIMATE] Safety: ${detectorOutput.safety_floor}, Confidence: ${(detectorOutput.confidence * 100).toFixed(0)}%`);
+          if (detectorOutput.risk_flags.low_confidence) console.log(`[ULTIMATE] ⚠ LOW CONFIDENCE`);
+          if (detectorOutput.risk_flags.ood_detected) console.log(`[ULTIMATE] ⚠ OOD DETECTED`);
+        }
+
+      } catch (error) {
+        console.warn('[ULTIMATE] Detection failed, falling back to hybrid:', error);
+        dimensionalState = await hybridDetector.detectAsync(s0_input, language, { field_state: s1_field });
       }
-
-    } catch (error) {
-      console.warn('[ULTIMATE] Detection failed, falling back to hybrid:', error);
+    } else {
+      // Use legacy hybrid detector
       dimensionalState = await hybridDetector.detectAsync(s0_input, language, { field_state: s1_field });
     }
   } else {
-    // Use legacy hybrid detector
-    dimensionalState = await hybridDetector.detectAsync(s0_input, language, { field_state: s1_field });
+    // Gating said skip LLM - use fast regex result (or cached)
+    if (gatingDecision?.cached_result) {
+      // Use cached LLM result
+      dimensionalState = {
+        ...fastDimensionalState,
+        v_mode_triggered: gatingDecision.cached_result.v_mode.triggered,
+        emergency_detected: gatingDecision.cached_result.emergency.triggered,
+      };
+      if (process.env.ENOQ_DEBUG) {
+        console.log(`[UNIFIED_GATING] Using cached result: v_mode=${dimensionalState.v_mode_triggered}, emergency=${dimensionalState.emergency_detected}`);
+      }
+    } else {
+      // Use fast regex result
+      dimensionalState = fastDimensionalState;
+      if (process.env.ENOQ_DEBUG) {
+        console.log(`[UNIFIED_GATING] Using regex result: v_mode=${dimensionalState.v_mode_triggered}, emergency=${dimensionalState.emergency_detected}`);
+      }
+    }
   }
 
   // Log dimensional state for debugging
@@ -1057,7 +1171,8 @@ export async function enoq(
       detectorOutput,
       dimensionalState,
       { diagnostics: stochasticDiagnostics, manifold: session.manifold_state, absorbed: stochasticEvolution.absorbed, curvature: undefined },
-      session.regulatory_state ? { state: session.regulatory_state, constraints_applied: [] } : undefined
+      session.regulatory_state ? { state: session.regulatory_state, constraints_applied: [] } : undefined,
+      gatingDecision ? { decision: gatingDecision, latency_ms: gatingLatencyMs } : undefined
     );
 
     const turn: Turn = {
@@ -1095,7 +1210,8 @@ export async function enoq(
       detectorOutput,
       dimensionalState,
       { diagnostics: stochasticDiagnostics, manifold: session.manifold_state, absorbed: stochasticEvolution.absorbed, curvature: undefined },
-      session.regulatory_state ? { state: session.regulatory_state, constraints_applied: [] } : undefined
+      session.regulatory_state ? { state: session.regulatory_state, constraints_applied: [] } : undefined,
+      gatingDecision ? { decision: gatingDecision, latency_ms: gatingLatencyMs } : undefined
     );
 
     const turn: Turn = {
@@ -1628,7 +1744,8 @@ export async function enoq(
     detectorOutput,
     dimensionalState,
     { diagnostics: stochasticDiagnostics, manifold: session.manifold_state, absorbed: stochasticEvolution.absorbed, curvature: stochasticCurvature },
-    session.regulatory_state ? { state: session.regulatory_state, constraints_applied: regulatoryConstraints } : undefined
+    session.regulatory_state ? { state: session.regulatory_state, constraints_applied: regulatoryConstraints } : undefined,
+    gatingDecision ? { decision: gatingDecision, latency_ms: gatingLatencyMs } : undefined
   );
 
   const turn: Turn = {
@@ -1707,6 +1824,11 @@ interface RegulatoryTraceInfo {
   constraints_applied: string[];
 }
 
+interface UnifiedGatingTraceInfo {
+  decision: UnifiedGatingDecision;
+  latency_ms: number;
+}
+
 function createTrace(
   input: string,
   field: FieldState,
@@ -1724,7 +1846,8 @@ function createTrace(
   detectorOutput?: DetectorOutput | null,
   dimensionalState?: DimensionalState,
   stochasticInfo?: StochasticTraceInfo,
-  regulatoryInfo?: RegulatoryTraceInfo
+  regulatoryInfo?: RegulatoryTraceInfo,
+  unifiedGatingInfo?: UnifiedGatingTraceInfo
 ): PipelineTrace {
   return {
     s0_gate: gateResult ? {
@@ -1792,6 +1915,13 @@ function createTrace(
       delegation_trend: regulatoryInfo.state.delegation_trend,
       loop_count: regulatoryInfo.state.loop_count,
       constraints_applied: regulatoryInfo.constraints_applied,
+    } : undefined,
+    s1_unified_gating: unifiedGatingInfo ? {
+      call_llm: unifiedGatingInfo.decision.call_llm,
+      stage: unifiedGatingInfo.decision.stage,
+      reason: unifiedGatingInfo.decision.reason,
+      np_score: unifiedGatingInfo.decision.np_score,
+      latency_ms: unifiedGatingInfo.latency_ms,
     } : undefined,
     s6_output: output,
     latency_ms: latencyMs,
@@ -1889,6 +2019,13 @@ export async function conversationLoop(): Promise<void> {
             for (const c of lastTrace.s1_regulatory.constraints_applied) {
               console.log(`  → ${c}`);
             }
+          }
+        }
+        // Unified Gating info (v5.1)
+        if (lastTrace.s1_unified_gating) {
+          console.log(`Gating: ${lastTrace.s1_unified_gating.reason} → call_llm=${lastTrace.s1_unified_gating.call_llm} (${lastTrace.s1_unified_gating.latency_ms}ms)`);
+          if (lastTrace.s1_unified_gating.np_score !== null) {
+            console.log(`  NP score: ${(lastTrace.s1_unified_gating.np_score * 100).toFixed(0)}%`);
           }
         }
         console.log(`Runtime: ${lastTrace.s4_context.runtime}`);

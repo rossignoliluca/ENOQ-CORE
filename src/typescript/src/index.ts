@@ -239,6 +239,59 @@ export {
 } from './genesis';
 
 // ============================================
+// v5.0 GATING EXPORTS (NP-calibrated + Lexicon)
+// ============================================
+
+// Existential lexicon (meaning-collapse markers)
+export {
+  scanExistentialLexicon,
+  getBoostedExistentialScore,
+  LexiconMatch,
+  LexiconResult,
+} from './existential_lexicon';
+
+// NP-calibrated gating
+export {
+  NPGating,
+  npGating,
+  NPGatingConfig,
+  NPGatingDecision,
+  NPGatingStats,
+  DEFAULT_NP_CONFIG,
+} from './np_gating';
+
+// v4.0 Scientific gating (fallback)
+export {
+  ScientificGating,
+  scientificGating,
+  CostConfig,
+  GatingDecision,
+  GatingStats,
+  DEFAULT_COST_CONFIG,
+} from './scientific_gating';
+
+// LLM cache
+export {
+  LLMDetectorCache,
+  CacheConfig,
+  CacheStats,
+} from './llm_cache';
+
+// ============================================
+// v5.1 UNIFIED GATING (Cache + Hard Skip + NP)
+// ============================================
+
+export {
+  UnifiedGating,
+  unifiedGating,
+  UnifiedGatingConfig,
+  UnifiedGatingDecision,
+  UnifiedGatingStats,
+  SkipReason,
+  DEFAULT_UNIFIED_CONFIG,
+} from './unified_gating';
+
+// ============================================
 // DEFAULT EXPORT
 // ============================================
 
