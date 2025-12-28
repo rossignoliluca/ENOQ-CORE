@@ -4,8 +4,9 @@
 
 > *Sistema Operativo Totale per l'Esistenza Umana*
 
-[![Release](https://img.shields.io/badge/release-v2.4.0-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.4.0)
-[![Tests](https://img.shields.io/badge/tests-315%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Release](https://img.shields.io/badge/release-v2.5.0-blue)](https://github.com/rossignoliluca/ENOQ-CORE/releases/tag/v2.5.0)
+[![Tests](https://img.shields.io/badge/tests-363%20passing-green)](https://github.com/rossignoliluca/ENOQ-CORE)
+[![Stochastic](https://img.shields.io/badge/dynamics-Langevin%20%2B%20O--U-purple)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Persistence](https://img.shields.io/badge/memory-regulatory--only-blue)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Gate](https://img.shields.io/badge/gate-0.1ms%20embedded-blue)](https://github.com/rossignoliluca/ENOQ-CORE)
 [![Accuracy](https://img.shields.io/badge/detector-100%25%20accuracy-brightgreen)](https://github.com/rossignoliluca/ENOQ-CORE)
@@ -63,6 +64,8 @@ L0.5 META-KERNEL (power governor)
 DOMAIN GOVERNOR (coexistence rules)
     ↓
 L1 FIELD COMPILER (perception → constraints)
+    ↓
+L1.5 STOCHASTIC FIELD (Langevin + O-U dynamics)    ← NEW v2.5
     ↓
 L2 EXECUTION (multi-domain, blind)
     ↓
@@ -145,6 +148,48 @@ Gravitational field metaphor for response shaping:
 - 7 Functions with Kenosis
 - Constitutional Attractors
 
+### Stochastic Field Theory (v2.5)
+Physics-based dynamics on configuration manifold **M = P(Ω) × R⁺ × [0,1]³**.
+
+**Langevin Equation:**
+```
+dq = -∇U dt/(1+γ) + √(2D) dB_H
+```
+
+**5 Potentials:**
+| Potential | Symbol | Description |
+|-----------|--------|-------------|
+| Identity barrier | U_I | Diverges at Rubicon boundary |
+| Relational field | U_R | Harmonic around equilibrium |
+| Temporal gradient | U_T | Past → Future orientation |
+| Somatic basin | U_S | Morse potential for grounding |
+| Generative landscape | U_G | Novelty-seeking term |
+
+**Regulatory Variables (Ornstein-Uhlenbeck):**
+| Symbol | Name | Equilibrium |
+|--------|------|-------------|
+| ε | Intervention capacity | μ = 1.0 |
+| γ | Dissipation coefficient | μ = 0.0 |
+| δ | Agency transfer gradient | μ = 0.0 |
+
+**Thermodynamic Mapping:**
+- Temperature: T = arousal × uncertainty
+- Diffusion: D = T/(1+γ) (Fluctuation-Dissipation)
+- Hurst exponent: H from coherence (fractional Brownian motion)
+- Equilibrium: p_eq ∝ exp(-U/T) (Boltzmann-Gibbs)
+
+**Boundary Conditions:**
+- **Reflecting** at ∂M_I (identity/Rubicon): Cannot cross into normative decisions
+- **Absorbing** at ∂M_E (emergency): Immediate grounding when σ > threshold
+
+**Regime Detection:**
+| Regime | Condition | Effect |
+|--------|-----------|--------|
+| STABLE | Normal operation | Full processing |
+| CRITICAL | Near identity boundary | Increased caution |
+| EXISTENTIAL | High existential load | V_MODE activation |
+| EMERGENCY | Somatic threshold exceeded | Absorbing → Ground state |
+
 ---
 
 ## Key Files
@@ -167,6 +212,7 @@ Gravitational field metaphor for response shaping:
 |------|-------------|-------|
 | `src/gate_embedded.ts` | L0 boundary marker | 54/54 |
 | `src/perception.ts` | Domain/arousal detection | 13/13 |
+| `src/stochastic_field.ts` | Langevin + O-U dynamics | 45/45 |
 | `src/selection.ts` | Mode/atmosphere routing | Built-in |
 | `src/domain_governor.ts` | Coexistence rules | Built-in |
 | `src/meta_kernel.ts` | Power governance | 14/14 |
@@ -181,7 +227,7 @@ Gravitational field metaphor for response shaping:
 ```bash
 cd src/typescript
 npm install
-npm test                    # Run all 204 tests
+npm test                    # Run all 363 tests
 ```
 
 ### Run Demos
@@ -200,6 +246,7 @@ npx ts-node src/__tests__/ultimate_benchmark.ts
 ### Run Individual Tests
 
 ```bash
+npx jest stochastic_field            # Langevin + O-U dynamics
 npx jest concrescence_integration    # Full integration
 npx jest dimensional_detection       # V_MODE + Emergency
 npx jest constitutional_components   # AXIS + Dissipation
@@ -230,6 +277,12 @@ Domain Governor:
 MetaKernel:
   - delegation_rate high → max_depth = medium
   - deep_mode_handshake required
+
+Stochastic Field (L1.5):
+  - Regime: EXISTENTIAL
+  - T=0.42, ε=0.95, γ=0.03
+  - U_total=2.8, F=1.9, S=1.1
+  - d_identity=0.35 (approaching Rubicon)
 
 L2 ExecutionContext:
   - Runtime: L2_DEEP
@@ -275,6 +328,7 @@ Core templates exist in EN, IT, ES, FR, DE with fallback support.
 
 | Component | Status | Score |
 |-----------|--------|-------|
+| Stochastic Field | ✅ Production | **45/45 tests**, Langevin + O-U |
 | Gate Embedded | ✅ Production | **<0.2ms** latency, 54 tests |
 | Ultimate Detector | ✅ Production | **100% accuracy** (27/27) |
 | ConcrescenceEngine | ✅ Complete | Unified entry point |
@@ -285,7 +339,7 @@ Core templates exist in EN, IT, ES, FR, DE with fallback support.
 | MetaKernel | ✅ Complete | 10/10 |
 | L2 Execution | ✅ Complete | 10/10 |
 | S5 Verify | ✅ Complete | 10/10 |
-| Test Suite | ✅ Passing | **258/258 tests** |
+| Test Suite | ✅ Passing | **363 tests** |
 
 ---
 
