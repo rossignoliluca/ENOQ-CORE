@@ -60,6 +60,17 @@ import {
   SafetyFloor,
   RiskFlags
 } from './ultimate_detector';
+import {
+  ManifoldState,
+  InputState,
+  FieldConfig,
+  DEFAULT_FIELD_CONFIG,
+  createInitialState as createInitialManifoldState,
+  stateFromInput,
+  evolve as evolveManifold,
+  diagnostics as manifoldDiagnostics,
+  FieldDiagnostics
+} from './stochastic_field';
 
 // ============================================
 // PIPELINE CONFIG
@@ -103,6 +114,9 @@ export interface Session {
 
   // State machines
   meta_kernel_state: MetaKernelState;
+
+  // Stochastic field state (Langevin dynamics)
+  manifold_state: ManifoldState;
 
   // Telemetry
   telemetry: SessionTelemetry;
@@ -179,6 +193,21 @@ export interface PipelineTrace {
   };
   s6_output: string;
 
+  // Stochastic field diagnostics
+  s3_stochastic?: {
+    regime: 'STABLE' | 'CRITICAL' | 'EMERGENCY' | 'EXISTENTIAL';
+    epsilon: number;       // Intervention capacity
+    gamma: number;         // Dissipation coefficient
+    delta: number;         // Agency transfer gradient
+    T: number;             // Effective temperature
+    D: number;             // Diffusion coefficient
+    U_total: number;       // Total potential energy
+    F: number;             // Free energy
+    S: number;             // Entropy
+    d_identity: number;    // Distance to identity boundary
+    absorbed: boolean;     // Hit absorbing boundary (emergency)
+  };
+
   // Timing
   latency_ms: number;
 }
@@ -228,6 +257,7 @@ export function createSession(): Session {
     created_at: new Date(),
     turns: [],
     meta_kernel_state: createDefaultMetaKernelState(),
+    manifold_state: createInitialManifoldState(),  // Stochastic field initial state
     telemetry: createDefaultTelemetry(),
     audit_trail: [],
     memory: {
@@ -239,6 +269,70 @@ export function createSession(): Session {
       recent_responses: [],
       response_history_limit: 5,
     },
+  };
+}
+
+// ============================================
+// STOCHASTIC FIELD HELPERS
+// ============================================
+
+/**
+ * Convert FieldState (L1 perception) to InputState (stochastic field)
+ *
+ * Maps psychological concepts to thermodynamic quantities:
+ * - arousal → thermal excitation
+ * - uncertainty → entropy contribution
+ * - coherence → correlation length
+ * - domains → existential/somatic/relational loads
+ */
+function fieldStateToInputState(field: FieldState, content: string): InputState {
+  // Compute existential load from domains (use salience property)
+  const existentialDomains = ['H06_MEANING', 'H07_IDENTITY', 'H10_TIME', 'H14_DEATH'];
+  const existentialLoad = field.domains
+    .filter(d => existentialDomains.includes(d.domain))
+    .reduce((sum, d) => sum + d.salience, 0) / Math.max(1, field.domains.length);
+
+  // Compute somatic activation
+  const somaticDomains = ['H01_SURVIVAL', 'H02_BODY'];
+  const somaticActivation = field.domains
+    .filter(d => somaticDomains.includes(d.domain))
+    .reduce((sum, d) => sum + d.salience, 0) / Math.max(1, field.domains.length);
+
+  // Compute relational valence
+  const relationalDomains = ['H04_ATTACHMENT', 'H05_BELONGING', 'H09_TRUST'];
+  const relationalScore = field.domains
+    .filter(d => relationalDomains.includes(d.domain))
+    .reduce((sum, d) => sum + d.salience, 0) / Math.max(1, field.domains.length);
+  const relationalValence = relationalScore * 2 - 1;  // Map [0,1] → [-1,1]
+
+  // Temporal orientation from flags
+  let temporalOrientation = 0;
+  if (field.flags.includes('rumination' as any) || field.flags.includes('regret' as any)) {
+    temporalOrientation = -0.5;
+  } else if (field.flags.includes('anxiety' as any) || field.flags.includes('planning' as any)) {
+    temporalOrientation = 0.5;
+  }
+
+  // Novelty from coherence (low coherence = novel/unexpected)
+  const coherenceNum = field.coherence === 'high' ? 0.9 : field.coherence === 'low' ? 0.3 : 0.6;
+  const novelty = field.coherence === 'high' ? 0.3 :
+                  field.coherence === 'low' ? 0.8 : 0.5;
+
+  // Map arousal from string to number if needed
+  const arousalNum = typeof field.arousal === 'number' ? field.arousal :
+                     field.arousal === 'high' ? 0.8 :
+                     field.arousal === 'low' ? 0.2 : 0.5;
+
+  return {
+    content,
+    arousal: arousalNum,
+    uncertainty: field.uncertainty,
+    coherence: coherenceNum,
+    existential_load: Math.min(1, existentialLoad * 1.5),  // Amplify slightly
+    somatic_activation: Math.min(1, somaticActivation * 1.5),
+    relational_valence: relationalValence,
+    temporal_orientation: temporalOrientation,
+    novelty
   };
 }
 
@@ -541,6 +635,50 @@ export async function enoq(
     session.memory.language_preference = s1_field.language;
   }
 
+  // ==========================================
+  // S1.5: STOCHASTIC FIELD EVOLUTION
+  // Langevin dynamics on configuration manifold
+  // dq = -∇U dt/(1+γ) + √(2D) dB_H
+  // ==========================================
+
+  const stochasticInput = fieldStateToInputState(s1_field, s0_input);
+  const stochasticEvolution = evolveManifold(
+    session.manifold_state,
+    stochasticInput,
+    DEFAULT_FIELD_CONFIG
+  );
+
+  // Update session manifold state
+  session.manifold_state = stochasticEvolution.state;
+
+  // Get diagnostics
+  const stochasticDiagnostics = manifoldDiagnostics(
+    session.manifold_state,
+    stochasticInput,
+    DEFAULT_FIELD_CONFIG
+  );
+
+  // Log stochastic field for debugging
+  if (process.env.ENOQ_DEBUG) {
+    console.log(`[STOCHASTIC] Regime: ${stochasticDiagnostics.regime}, T=${session.manifold_state.T.toFixed(3)}, ε=${session.manifold_state.epsilon.toFixed(3)}`);
+    console.log(`[STOCHASTIC] U=${stochasticDiagnostics.U_total.toFixed(2)}, F=${stochasticDiagnostics.F.toFixed(2)}, S=${stochasticDiagnostics.S.toFixed(3)}`);
+    if (stochasticEvolution.absorbed) {
+      console.log(`[STOCHASTIC] ABSORBED: Emergency grounding triggered`);
+    }
+  }
+
+  // If stochastic field triggered emergency absorption, override
+  if (stochasticEvolution.absorbed && !dimensionalState.emergency_detected) {
+    dimensionalState = {
+      ...dimensionalState,
+      emergency_detected: true,
+      primary_vertical: 'SOMATIC'
+    };
+    if (process.env.ENOQ_DEBUG) {
+      console.log(`[STOCHASTIC] Override: Emergency detected via absorbing boundary`);
+    }
+  }
+
   // Update telemetry
   session.telemetry = updateTelemetry(session, s1_field, s0_input);
 
@@ -593,7 +731,8 @@ export async function enoq(
       gateEffect,
       undefined, // fieldTraceInfo
       detectorOutput,
-      dimensionalState
+      dimensionalState,
+      { diagnostics: stochasticDiagnostics, manifold: session.manifold_state, absorbed: stochasticEvolution.absorbed }
     );
 
     const turn: Turn = {
@@ -629,7 +768,8 @@ export async function enoq(
       gateEffect,
       undefined, // fieldTraceInfo
       detectorOutput,
-      dimensionalState
+      dimensionalState,
+      { diagnostics: stochasticDiagnostics, manifold: session.manifold_state, absorbed: stochasticEvolution.absorbed }
     );
 
     const turn: Turn = {
@@ -864,7 +1004,8 @@ export async function enoq(
     gateEffect,
     getFieldTraceInfo(fieldResponse),
     detectorOutput,
-    dimensionalState
+    dimensionalState,
+    { diagnostics: stochasticDiagnostics, manifold: session.manifold_state, absorbed: stochasticEvolution.absorbed }
   );
 
   const turn: Turn = {
@@ -887,6 +1028,12 @@ export async function enoq(
 // TRACE HELPERS
 // ============================================
 
+interface StochasticTraceInfo {
+  diagnostics: FieldDiagnostics;
+  manifold: ManifoldState;
+  absorbed: boolean;
+}
+
 function createTrace(
   input: string,
   field: FieldState,
@@ -902,7 +1049,8 @@ function createTrace(
   gateEffect?: GateSignalEffect,
   fieldTraceInfo?: FieldTraceInfo,
   detectorOutput?: DetectorOutput | null,
-  dimensionalState?: DimensionalState
+  dimensionalState?: DimensionalState,
+  stochasticInfo?: StochasticTraceInfo
 ): PipelineTrace {
   return {
     s0_gate: gateResult ? {
@@ -942,6 +1090,19 @@ function createTrace(
       violations: verification.violations.length,
       fallback_used: !verification.passed,
     },
+    s3_stochastic: stochasticInfo ? {
+      regime: stochasticInfo.diagnostics.regime,
+      epsilon: stochasticInfo.manifold.epsilon,
+      gamma: stochasticInfo.manifold.gamma,
+      delta: stochasticInfo.manifold.delta,
+      T: stochasticInfo.manifold.T,
+      D: stochasticInfo.manifold.D,
+      U_total: stochasticInfo.diagnostics.U_total,
+      F: stochasticInfo.diagnostics.F,
+      S: stochasticInfo.diagnostics.S,
+      d_identity: stochasticInfo.diagnostics.d_identity,
+      absorbed: stochasticInfo.absorbed,
+    } : undefined,
     s6_output: output,
     latency_ms: latencyMs,
   };
@@ -1013,6 +1174,15 @@ export async function conversationLoop(): Promise<void> {
           }
           if (lastTrace.s3_field.curvature_explanation.length > 0) {
             console.log(`Field curvature: ${lastTrace.s3_field.curvature_explanation.join('; ')}`);
+          }
+        }
+        // Stochastic Field info
+        if (lastTrace.s3_stochastic) {
+          console.log(`Stochastic: regime=${lastTrace.s3_stochastic.regime}, T=${lastTrace.s3_stochastic.T.toFixed(3)}, ε=${lastTrace.s3_stochastic.epsilon.toFixed(3)}`);
+          console.log(`Stochastic: U=${lastTrace.s3_stochastic.U_total.toFixed(2)}, F=${lastTrace.s3_stochastic.F.toFixed(2)}, S=${lastTrace.s3_stochastic.S.toFixed(3)}`);
+          console.log(`Stochastic: γ=${lastTrace.s3_stochastic.gamma.toFixed(3)}, δ=${lastTrace.s3_stochastic.delta.toFixed(3)}, d_I=${lastTrace.s3_stochastic.d_identity.toFixed(3)}`);
+          if (lastTrace.s3_stochastic.absorbed) {
+            console.log(`Stochastic: ABSORBED (emergency grounding)`);
           }
         }
         console.log(`Runtime: ${lastTrace.s4_context.runtime}`);
