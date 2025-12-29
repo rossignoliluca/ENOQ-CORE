@@ -81,13 +81,36 @@ npx ts-node src/runtime/io/interactive_session.ts
 
 ---
 
-## Tags
+## Changelog (v6.x)
 
-| Tag | Meaning |
-|-----|---------|
-| `v6.1` | Documentation coherence, READMEs |
-| `v6.0` | AXIS constitutional freeze |
-| `v0.1-geometry-clean` | Structure frozen, invariants defined |
+| Version | Date | Changes |
+|---------|------|---------|
+| **v6.3** | 2024-12-29 | Docs cleanup: AXIS.md→AXIS_PHILOSOPHY.md, CONSTITUTION→legacy |
+| **v6.2** | 2024-12-29 | Scatter cleanup: legacy banners, research/ consolidation |
+| **v6.1** | 2024-12-29 | Documentation coherence: 9 READMEs, INDEX updates |
+| **v6.0** | 2024-12-29 | AXIS constitutional freeze (12 axioms, 11 invariants) |
+
+### v6.3 Details
+- `docs/AXIS.md` → `docs/AXIS_PHILOSOPHY.md` (disambiguate from AXIS/)
+- `docs/CONSTITUTION.md` → `docs/legacy/` (duplicated AXIS/INVARIANTS.md)
+- `V3_1_RUNTIME_FLOW.md` → `docs/legacy/` (versioned v3.1)
+- Updated 7 docs refs to point to AXIS/INVARIANTS.md
+
+### v6.2 Details
+- Added "Legacy active structure" banner to gate/, operational/, mediator/, runtime/
+- Deleted stale `research/` folder (duplicate of experimental/)
+- Fixed broken import in field_integration.ts
+- Established canonical structure: core/ = target, runtime/ = current
+
+### v6.1 Details
+- Created READMEs for 9 directories (AXIS, interface, gate, operational, mediator, runtime, surfaces, external, docs/legacy)
+- Added canonical entrypoints section to docs/INDEX.md
+- Updated README structure diagram
+
+### v6.0 Details
+- Froze AXIS constitutional documents (AXIOMS, INVARIANTS, RUBICON, ORGANS)
+- Created HASH_FREEZE.md with cryptographic verification
+- Established docs/REPO_CONTRACT.md with 6 frozen rules
 
 ---
 
