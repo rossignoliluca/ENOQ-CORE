@@ -1,11 +1,12 @@
 {
-  "name": "enoq-core",
-  "version": "2.0.0",
-  "description": "ENOQ - Sistema Operativo Totale per l'Esistenza Umana",
+  "name": "limen-core",
+  "version": "5.2.0",
+  "description": "LIMEN - Two-geometry normative control system for human flourishing",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "enoq": "./dist/enoq_cli.js"
+    "limen": "./dist/runtime/io/cli.js",
+    "enoq": "./dist/runtime/io/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -30,10 +31,11 @@
     "test:concrescence": "ts-node src/test_concrescence.ts"
   },
   "keywords": [
-    "enoq",
-    "cognitive-companion",
-    "ai-ethics",
-    "decision-support"
+    "limen",
+    "cognitive-control",
+    "two-geometry",
+    "normative-gate",
+    "human-flourishing"
   ],
   "author": "Luca Rossignoli",
   "license": "UNLICENSED",
