@@ -1,4 +1,7 @@
-# LIMEN System Map
+# ENOQ System Map
+
+> **Note:** ENOQ is the total system. LIMEN is one of nine organs.
+> See [ADR-007](/src/typescript/docs/decisions/ADR_007_enoq_canonical_architecture.md) for canonical architecture.
 
 ## Directory Structure
 

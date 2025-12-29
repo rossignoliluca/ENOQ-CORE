@@ -1,6 +1,6 @@
-# LIMEN Documentation
+# ENOQ Documentation
 
-> Start here. This is the single entrypoint for all LIMEN documentation.
+> Start here. This is the single entrypoint for all ENOQ documentation.
 
 ---
 
@@ -10,8 +10,22 @@
 |----------|-------------|
 | [README](/README.md) | Project overview, quick start |
 | [CONTRIBUTING](/src/typescript/CONTRIBUTING.md) | 3 rules for contributors |
-| [ARCHITECTURE](/src/typescript/docs/ARCHITECTURE.md) | System architecture (v5.2) |
+| [ARCHITECTURE](/src/typescript/docs/ARCHITECTURE.md) | System architecture (v6.0) |
 | [SYSTEM_MAP](/src/typescript/docs/SYSTEM_MAP.md) | Directory structure guide |
+
+---
+
+## Constitutional Ground (AXIS)
+
+> AXIS is frozen. These documents define ENOQ's identity.
+
+| Document | Purpose |
+|----------|---------|
+| [AXIOMS](/AXIS/AXIOMS.md) | 12 frozen axioms (infinite priors) |
+| [INVARIANTS](/AXIS/INVARIANTS.md) | 11 structural constraints |
+| [RUBICON](/AXIS/RUBICON.md) | Existential threshold specification |
+| [ORGANS](/AXIS/ORGANS.md) | Nine organs specification |
+| [HASH_FREEZE](/AXIS/HASH_FREEZE.md) | Cryptographic verification |
 
 ---
 
@@ -23,15 +37,15 @@
 |----------|---------|
 | [ARCHITECTURE.md](/src/typescript/docs/ARCHITECTURE.md) | Layer overview, import boundaries |
 | [SYSTEM_MAP.md](/src/typescript/docs/SYSTEM_MAP.md) | File-by-file directory guide |
+| [ORGAN_MAP.md](./ORGAN_MAP.md) | Code → organs mapping |
 | [ADR Index](/src/typescript/docs/decisions/) | Architecture Decision Records |
 
-### Constitution (Invariants)
+### Session Recovery
 
 | Document | Purpose |
 |----------|---------|
-| [CONSTITUTION.md](./CONSTITUTION.md) | Core principles and laws |
-| [AXIS.md](./AXIS.md) | Constitutional invariants (INV-003, INV-009, INV-011) |
-| [META_KERNEL.md](./META_KERNEL.md) | 215 disciplines synthesis |
+| [SESSION_BOOTSTRAP.md](./SESSION_BOOTSTRAP.md) | Claude context recovery |
+| [ARCHITECTURE_TOTAL.md](./ARCHITECTURE_TOTAL.md) | Master architecture reference |
 
 ### Specifications
 
@@ -60,8 +74,25 @@
 | [ADR-002](/src/typescript/docs/decisions/ADR_002_monotonic_tightening.md) | Monotonic Tightening | Accepted |
 | [ADR-003](/src/typescript/docs/decisions/ADR_003_research_isolation.md) | Research Isolation | Accepted |
 | [ADR-004](/src/typescript/docs/decisions/ADR_004_unified_gating.md) | Unified Gating (v5.1) | Accepted |
-| [ADR-005](/src/typescript/docs/decisions/ADR_005_rename_limen.md) | Rename to LIMEN | Accepted |
+| [ADR-005](/src/typescript/docs/decisions/ADR_005_rename_kernel_limen.md) | Rename to LIMEN | **SUPERSEDED by ADR-007** |
 | [ADR-006](/src/typescript/docs/decisions/ADR_006_gate_mediator_architecture.md) | GATE-MEDIATOR Architecture | Accepted |
+| [ADR-007](/src/typescript/docs/decisions/ADR_007_enoq_canonical_architecture.md) | ENOQ Canonical Architecture | **ACCEPTED (Canonical)** |
+
+---
+
+## The Nine Organs
+
+| Organ | Function | VSM |
+|-------|----------|-----|
+| **LIMEN** | Boundary, filtering | S5 |
+| **SENSUS** | Perception, field reading | S4 |
+| **NEXUS** | Memory | S2 |
+| **LOGOS** | Planning, selection | S3 |
+| **ERGON** | Execution, output | S1 |
+| **CHRONOS** | Temporal patterns | S2 |
+| **TELOS** | Verification, withdrawal | S5 |
+| **IMMUNIS** | Anti-drift, anti-dependency | S5 |
+| **META** | Self-observation | S4 |
 
 ---
 
@@ -77,10 +108,11 @@ See [CONTRIBUTING.md](/src/typescript/CONTRIBUTING.md) for rules.
 
 ## Legacy Documentation
 
-> Historical documents from before the LIMEN architecture.
+> Historical documents from before the v6.0 architecture.
 
-- [docs/legacy/](./legacy/) - Outdated ENOQ-era documentation
+- [docs/legacy/](./legacy/) - Outdated pre-v6.0 documentation
 
 ---
 
-*LIMEN (Latin: "threshold") - Cognitive Control System for Human Flourishing*
+*ENOQ: Autopoietic Viable System for Human Empowerment*
+*LIMEN is one of nine organs (threshold/boundary function)*

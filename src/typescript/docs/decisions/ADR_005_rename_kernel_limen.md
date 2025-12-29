@@ -1,7 +1,14 @@
 # ADR-005: Rename ENOQ-CORE to LIMEN
 
 ## Status
-Accepted
+**SUPERSEDED BY [ADR-007](./ADR_007_enoq_canonical_architecture.md)**
+
+> **Note:** This ADR incorrectly established LIMEN as the total system name.
+> ADR-007 corrects this: ENOQ is the total system, LIMEN is one of nine organs.
+> The naming hierarchy is now: ENOQ (system) > LIMEN (organ).
+
+## Original Status
+Accepted (November 2024) - Now superseded
 
 ## Context
 The project needed a clear identity separation:

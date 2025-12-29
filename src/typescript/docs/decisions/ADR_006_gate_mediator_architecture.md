@@ -3,23 +3,27 @@
 ## Status
 Accepted (Updated 2024-12-28)
 
+> **Note (v6.0):** Per [ADR-007](./ADR_007_enoq_canonical_architecture.md), ENOQ is the total system.
+> LIMEN is now understood as one of nine organs (the boundary/threshold organ).
+> The architecture described here remains valid - the subsystems map to ENOQ's organs.
+
 ## Date
 2024-12-28
 
 ## Context
 
-LIMEN is a cognitive control system. The previous structure mixed operational and normative concerns across epistemic layers. We needed a cleaner separation that reflects the system's actual cognitive architecture.
+ENOQ (the total system) required a cleaner separation of operational and normative concerns. The architecture described here defines the code organization within the `gate/`, `operational/`, `mediator/`, and `runtime/` directories.
 
 ## Decision
 
-LIMEN is now composed of four primary subsystems:
+ENOQ's codebase is organized into four primary subsystems:
 
 ```
-LIMEN (the system)
+ENOQ (the total system)
 ├── INTERFACE    - Shared contracts and types
-├── GATE         - Normative gating & inhibitory control
-├── OPERATIONAL  - Routing, detection, gating decisions
-├── MEDIATOR     - Cognitive mediation engine (L1-L5)
+├── GATE         - Normative gating (LIMEN, TELOS, IMMUNIS organs)
+├── OPERATIONAL  - Routing, detection (SENSUS organ)
+├── MEDIATOR     - Cognitive mediation (LOGOS, ERGON, NEXUS, CHRONOS, META organs)
 └── RUNTIME      - Execution layer (pipeline, IO)
 ```
 
@@ -100,7 +104,7 @@ Import boundaries are enforced by:
 
 ## Canonical Sentence
 
-> LIMEN is a cognitive control system composed of a normative gate, an operational geometry, and a cognitive mediator, with a runtime execution layer.
+> ENOQ is an autopoietic viable system composed of nine organs, with code organized into interface, gate, operational, mediator, and runtime subsystems.
 
 ## Consequences
 

@@ -1,22 +1,35 @@
 /**
- * LIMEN - Cognitive Operating System for Human Flourishing
+ * ENOQ - Autopoietic Viable System for Human Empowerment
  *
- * LIMEN (Latin: "threshold") is a cognitive control system composed of
- * a normative gate and a cognitive mediator, with optional runtimes such as ENOQ.
+ * ENOQ is the total system, composed of nine organs including LIMEN (boundary).
+ * See ADR-007 for canonical architecture.
+ *
+ * The Nine Organs:
+ * - LIMEN: Boundary, filtering, protection (S5)
+ * - SENSUS: Perception, field reading (S4)
+ * - NEXUS: Memory (S2)
+ * - LOGOS: Planning, selection (S3)
+ * - ERGON: Execution, output (S1)
+ * - CHRONOS: Temporal patterns (S2)
+ * - TELOS: Verification, withdrawal (S5)
+ * - IMMUNIS: Anti-drift, anti-dependency (S5)
+ * - META: Self-observation, confidence (S4)
  *
  * Architecture:
- * - gate/: Normative gating & inhibitory control (thalamic-style)
- * - mediator/: Cognitive mediation engine (L0-L5 layers)
- * - runtimes/: Optional execution layers (e.g., ENOQ)
  * - interface/: Shared contracts and types
+ * - gate/: Normative gating (LIMEN, TELOS, IMMUNIS organs)
+ * - operational/: Routing & detection (SENSUS organ)
+ * - mediator/: Cognitive processing (LOGOS, ERGON, NEXUS, CHRONOS, META organs)
+ * - runtime/: Execution layer
  *
  * Scientific basis:
- * - Whitehead: Process Philosophy, Prehension, Concrescence
- * - Varela: Reciprocal Constraints, Neurophenomenology
+ * - Whitehead: Process Philosophy, Concrescence
+ * - Maturana/Varela: Autopoiesis
+ * - Beer: Viable System Model
+ * - Friston: Free Energy Principle
  * - Baars: Global Workspace Theory
- * - Friston: Free Energy Principle, Active Inference
  *
- * PRIMARY API: limen() - Full pipeline processing
+ * PRIMARY API: enoq() - Full pipeline processing
  */
 
 // ============================================

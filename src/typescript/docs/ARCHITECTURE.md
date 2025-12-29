@@ -1,8 +1,11 @@
-# LIMEN Architecture
+# ENOQ Architecture
+
+> **Note:** ENOQ is the total system. LIMEN is one of nine organs (boundary/threshold function).
+> See [ADR-007](/src/typescript/docs/decisions/ADR_007_enoq_canonical_architecture.md) for canonical architecture.
 
 ## Overview
 
-LIMEN (Latin: "threshold") is a **two-geometry cognitive control system** for human flourishing without dependency creation.
+ENOQ is an **autopoietic viable system** for human empowerment with a **two-geometry cognitive architecture**.
 
 It is NOT a linear chatbot pipeline. It is a system with:
 1. **Normative Geometry** (gate/) - What MUST NOT happen
@@ -90,7 +93,7 @@ The meta-kernel synthesizes 215 disciplines:
 - Systems theory
 - Ethics
 
-**Key pattern**: "THE GUIDE WITHDRAWS" - Success = user doesn't need LIMEN.
+**Key pattern**: "THE GUIDE WITHDRAWS" - Success = user doesn't need ENOQ.
 
 ### Concrescence Engine
 
@@ -211,14 +214,32 @@ Every time operational power increases, normative sovereignty remains **structur
 
 ## Philosophy
 
-> **LIMEN can:**
+> **ENOQ can:**
 > - Do everything operationally (write, analyze, structure, execute)
 > - See everything about the field (emotions, domains, patterns)
 >
-> **LIMEN cannot:**
+> **ENOQ cannot:**
 > - Decide what matters for you
 > - Define your identity
 > - Assign your purpose
 > - Recommend what you should do
 >
 > This is not a limitation. It is the architecture.
+
+---
+
+## The Nine Organs
+
+ENOQ operates through nine viable subsystems:
+
+| Organ | Function | VSM |
+|-------|----------|-----|
+| **LIMEN** | Boundary, filtering, protection | S5 |
+| **SENSUS** | Perception, field reading | S4 |
+| **NEXUS** | Memory (episodic, semantic, procedural) | S2 |
+| **LOGOS** | Planning, selection, coordination | S3 |
+| **ERGON** | Execution, output production | S1 |
+| **CHRONOS** | Temporal patterns, prediction | S2 |
+| **TELOS** | Verification, completion, withdrawal | S5 |
+| **IMMUNIS** | Anti-drift, anti-dependency | S5 |
+| **META** | Self-observation, confidence, coherence | S4 |
