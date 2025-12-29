@@ -85,13 +85,12 @@ ENOQ-CORE/
 
 See [docs/REPO_CONTRACT.md](./docs/REPO_CONTRACT.md):
 
-1. `unified_gating.ts` is the only canonical gating export
-2. `experimental/legacy/` must NOT be imported from core
-3. `external/cache/` is the only location for caching
-4. `enoq()` is the sole entry point surfaces → core
-5. `np_gating.ts` is internal, not exported
-6. `research/` does not exist
-7. Empty canonical directories are intentional scaffolds
+1. `enoqCore()` is the canonical entry point (v6.7+)
+2. `experimental/` must NOT be imported from core
+3. `surfaces/` and `external/` cannot import from `core/modules/`
+4. `npm run axis-check` must PASS before deployment
+5. `external/cache/` is the only location for caching
+6. Empty canonical directories are intentional scaffolds
 
 ---
 
@@ -102,6 +101,7 @@ cd src/typescript
 npm install
 npm test              # 618 tests
 npm run build
+npm run axis-check    # MUST PASS
 ```
 
 Interactive:
@@ -116,6 +116,7 @@ npx ts-node src/runtime/io/interactive_session.ts
 | What | Where |
 |------|-------|
 | Constitutional ground | [AXIS/AXIOMS.md](./AXIS/AXIOMS.md) |
+| Invariant enforcement | [AXIS/IMPLEMENTATION_MAP.md](./AXIS/IMPLEMENTATION_MAP.md) |
 | Pipeline flow | [src/typescript/src/core/pipeline/README.md](./src/typescript/src/core/pipeline/README.md) |
 | Module docs | [src/typescript/src/core/modules/](./src/typescript/src/core/modules/) |
 | Architecture rules | [docs/REPO_CONTRACT.md](./docs/REPO_CONTRACT.md) |
