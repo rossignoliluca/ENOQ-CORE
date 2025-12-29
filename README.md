@@ -4,8 +4,8 @@
 
 > *LIMEN is a cognitive control system composed of a normative gate and a cognitive mediator, with optional runtimes such as ENOQ.*
 
-[![Release](https://img.shields.io/badge/release-v6.0-blue)](https://github.com/rossignoliluca/LIMEN-CORE/releases)
-[![Tests](https://img.shields.io/badge/tests-passing-green)](https://github.com/rossignoliluca/LIMEN-CORE)
+[![Release](https://img.shields.io/badge/release-v5.2-blue)](https://github.com/rossignoliluca/LIMEN-CORE/releases)
+[![Tests](https://img.shields.io/badge/tests-618%20passing-green)](https://github.com/rossignoliluca/LIMEN-CORE)
 [![Architecture](https://img.shields.io/badge/architecture-GATE%20%2B%20MEDIATOR-purple)](https://github.com/rossignoliluca/LIMEN-CORE)
 
 ---
@@ -46,47 +46,60 @@ Every time operational power increases, normative sovereignty remains **structur
 
 ---
 
-## Architecture (v6.0 - GATE + MEDIATOR)
+## Architecture (v5.2)
 
 ```
 src/
-├── gate/                            # Normative gating & inhibitory control
-│   ├── invariants/                  # Constitutional constraints (axis.ts)
-│   ├── thresholds/                  # Gating thresholds (llm_cache.ts)
-│   ├── emergency/                   # Crisis detection
-│   ├── withdrawal/                  # Regulatory store, lifecycle
-│   ├── verification/                # S5_verify, plan_act_verifier
-│   ├── geometry_normative/          # domain_governor, ads_detector
-│   └── geometry_operational/        # unified_gating, np_gating
+├── interface/                       # Pure types (no imports)
+│   └── types.ts
 │
-├── mediator/                        # Cognitive mediation engine
-│   ├── l0_intake/                   # Dimensional detection, LLM providers
+├── gate/                            # Normative constraints (HARD limits)
+│   ├── invariants/                  # Constitutional constraints (axis.ts)
+│   ├── thresholds/                  # LLM cache
+│   ├── enforcement/                 # domain_governor, ads_detector, second_order
+│   ├── withdrawal/                  # Regulatory store, lifecycle
+│   └── verification/                # S5_verify, plan_act_verifier
+│
+├── operational/                     # Detection, gating, signals
+│   ├── detectors/                   # dimensional_system, llm_detector, ultimate
+│   ├── gating/                      # unified_gating, np_gating, scientific
+│   ├── signals/                     # early_signals
+│   └── providers/                   # gate_client, gate_embedded, llm_provider
+│
+├── mediator/                        # Pure transformations (no IO)
 │   ├── l1_clarify/                  # Perception
 │   ├── l2_reflect/                  # Selection, stochastic field
 │   ├── l3_integrate/                # Meta-kernel, disciplines synthesis
 │   ├── l4_agency/                   # Total system, agent swarm
-│   ├── l5_transform/                # Generation, plan rendering
+│   ├── l5_transform/                # Response plan, agent responses
 │   └── concrescence/                # Whiteheadian process integration
 │
-├── runtimes/                        # Optional execution layers
-│   └── enoq/
-│       ├── pipeline/                # ENOQ pipeline
-│       └── io/                      # CLI, server
+├── runtime/                         # Pipeline orchestration, IO
+│   ├── pipeline/                    # Main pipeline, l2_execution
+│   ├── io/                          # CLI, interactive session
+│   └── experimental/                # Field integration bridge
 │
-├── interface/                       # Shared contracts
-│   └── types.ts
+├── research/                        # Isolated experiments (never imported)
+│   ├── genesis/                     # Field theory, attractors
+│   └── cognitive_router/            # Advanced routing research
 │
-├── research/                        # Experiments (never imported by production)
 └── benchmarks/                      # Test cases
 ```
 
-### Dependency Rules
+### Import Boundaries
 
 ```
-interface/ <-- gate/ <-- mediator/ <-- runtimes/
+interface/ <-- gate/ <-- operational/ <-- mediator/ <-- runtime/
 ```
 
-**CRITICAL**: gate/ MUST NOT import from mediator/ or runtimes/
+| Layer | Can Import From |
+|-------|-----------------|
+| `interface/` | Nothing |
+| `gate/` | `interface/` only |
+| `operational/` | `interface/`, `gate/` |
+| `mediator/` | `interface/`, `gate/`, `operational/` |
+| `runtime/` | All of the above |
+| `research/` | Anything (but never imported by production) |
 
 ---
 
@@ -95,12 +108,15 @@ interface/ <-- gate/ <-- mediator/ <-- runtimes/
 ### GATE (Normative Control)
 - **AXIS**: Constitutional invariants (INV-003, INV-009, INV-011)
 - **S5 Verify**: Constitutional enforcement
-- **Unified Gating (v5.1)**: Single routing point (69% LLM call reduction)
 - **ADS Detector**: Delegation detection -> HARD constraints
 - **Second Order Observer**: Enchantment cooling -> SOFT constraints
 
+### OPERATIONAL (Detection & Routing)
+- **Dimensional System**: V_MODE, emergency, vertical/horizontal detection
+- **Unified Gating**: Single routing point (69% LLM call reduction)
+- **LLM Providers**: Abstraction over Claude/GPT APIs
+
 ### MEDIATOR (Cognitive Processing)
-- **L0 Intake**: Dimensional detection, V_MODE, emergency
 - **L1 Clarify**: Perception of the field
 - **L2 Reflect**: Selection, stochastic field dynamics
 - **L3 Integrate**: Meta-kernel, 215 disciplines synthesis
@@ -108,8 +124,9 @@ interface/ <-- gate/ <-- mediator/ <-- runtimes/
 - **L5 Transform**: Response generation
 - **Concrescence**: Whiteheadian process philosophy
 
-### RUNTIMES
-- **ENOQ**: User-facing interactive runtime
+### RUNTIME
+- **Pipeline**: Main ENOQ processing flow
+- **IO**: CLI and interactive sessions
 
 ---
 
@@ -160,10 +177,10 @@ npm run build               # Build TypeScript
 
 ```bash
 # Interactive session
-npx ts-node src/runtimes/enoq/io/interactive_session.ts
+npx ts-node src/runtime/io/interactive_session.ts
 
 # CLI
-npx ts-node src/runtimes/enoq/io/cli.ts
+npx ts-node src/runtime/io/cli.ts
 ```
 
 ---
@@ -199,9 +216,10 @@ npx ts-node src/runtimes/enoq/io/cli.ts
 
 | Component | Status | Coverage |
 |-----------|--------|----------|
-| GATE | Production | Invariants, Gating, Verification |
-| MEDIATOR | Production | L0-L5, Concrescence |
-| ENOQ Runtime | Production | Pipeline, IO |
+| GATE | Production | Invariants, Enforcement, Verification |
+| OPERATIONAL | Production | Detectors, Gating, Providers |
+| MEDIATOR | Production | L1-L5, Concrescence |
+| RUNTIME | Production | Pipeline, IO |
 | Research | Experimental | Genesis, Cognitive Router |
 | Benchmarks | Complete | 100+ test cases |
 
