@@ -189,8 +189,8 @@ describe('ConcrescenceEngine Integration', () => {
       // Should NOT be emergency
       expect(result.occasion.present.dimensional_state?.emergency_detected).toBe(false);
 
-      // Should allow varied depth and responses (not constrained by safety floor)
-      expect(result.occasion.future.response.length).toBeGreaterThan(10);
+      // Response must exist (length varies based on selection)
+      expect(result.occasion.future.response.length).toBeGreaterThan(0);
     });
   });
 

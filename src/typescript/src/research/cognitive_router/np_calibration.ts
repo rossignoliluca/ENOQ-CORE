@@ -26,7 +26,7 @@
 import { DimensionalState, DimensionalDetector } from '../../operational/detectors/dimensional_system';
 import { BENCHMARK_CASES, BenchmarkCase } from '../../benchmarks/cases/benchmark_cases';
 import { SupportedLanguage } from '../../interface/types';
-import { getBoostedExistentialScore, LexiconMatch } from './existential_lexicon';
+import { getBoostedExistentialScore, LexiconMatch } from '../../operational/detectors/existential_lexicon';
 import * as fs from 'fs';
 import * as path from 'path';
 
