@@ -20,7 +20,6 @@
 | Document | Description |
 |----------|-------------|
 | [README](/README.md) | Project overview, quick start |
-| [CONTRIBUTING](/src/typescript/CONTRIBUTING.md) | 3 rules for contributors |
 | [ARCHITECTURE](/src/typescript/docs/ARCHITECTURE.md) | System architecture (v6.0) |
 | [SYSTEM_MAP](/src/typescript/docs/SYSTEM_MAP.md) | Directory structure guide |
 
@@ -93,7 +92,7 @@ interface/ <-- gate/ <-- operational/ <-- mediator/ <-- runtime/
 core/interface/ <-- core/modules/ <-- core/pipeline/ <-- core/signals/
 ```
 
-See [CONTRIBUTING.md](/src/typescript/CONTRIBUTING.md) for rules.
+See [ARCHITECTURE.md](/src/typescript/docs/ARCHITECTURE.md) for layer rules.
 
 ---
 
