@@ -290,7 +290,7 @@ export class SQLiteStore implements IRegulatoryStore {
 
   clear(): void {
     try {
-      this.db.exec('DELETE FROM regulatory_state');
+      this.db.exec('DELETE FROM field_state');
     } catch {
       // Table might not exist yet, ignore
     }
