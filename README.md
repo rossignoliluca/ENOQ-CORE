@@ -165,6 +165,7 @@ npx ts-node src/runtime/io/interactive_session.ts
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **v7.4** | 2025-12-30 | P2: Core hardening - content compliance, golden tests, observability |
 | **v7.3** | 2025-12-30 | P1: enoqCore canonical, EnoqError types, LLM fallback chain |
 | **v7.2** | 2025-12-30 | P0 stabilization: 58 new tests, import fixes, axis-check extended |
 | **v7.1** | 2025-12-30 | DECISION traversal: third crossing through geometry |
@@ -186,6 +187,8 @@ npx ts-node src/runtime/io/interactive_session.ts
 | **v6.0** | 2025-12-29 | AXIS constitutional freeze (12 axioms, 11 invariants) |
 
 ### Recent Details
+
+**v7.4**: P2 Core Hardening - Content compliance engine (NORMATIVE/RANKING/ENGAGEMENT/PERSUASION patterns across 5 languages), golden test harness (60 tests for MAIL/RELATION/DECISION), observability module (events: BOUNDARY_BLOCKED, VERIFY_FAILED, RUBICON_WITHDRAW, PROVIDER_FAILOVER + metrics + JSON logging), axis-check extended to 18 verification points across 6 groups. Tests: 879.
 
 **v7.3**: P1 stabilization - enoqCore canonical entry (enoq deprecated), EnoqError base class with typed codes (API/CONFIG/VALIDATION/PIPELINE/INVARIANT), LLM fallback chain (Anthropic→OpenAI). Architecture notes in README. Tests: 676/692.
 
