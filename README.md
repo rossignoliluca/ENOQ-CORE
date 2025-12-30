@@ -4,7 +4,7 @@ ENOQ Engine — Constitutional geometric motor (permit → verify → stop).
 
 > Autopoietic viable system for human empowerment.
 
-**Standard:** [ENOQ Standard v1.0 (Draft)](./STANDARD/ENOQ_STANDARD_v1.0_DRAFT.md)
+**Standard:** [enoq-standard](https://github.com/rossignoliluca/enoq-standard)
 
 ---
 

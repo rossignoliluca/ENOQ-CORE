@@ -27,16 +27,9 @@
 
 ---
 
-## ENOQ Standard (Draft)
+## ENOQ Standard
 
-> Normative specification for ENOQ-compliant systems.
-
-| Document | Purpose |
-|----------|---------|
-| [ENOQ Standard v1.0](/STANDARD/ENOQ_STANDARD_v1.0_DRAFT.md) | Main specification (draft) |
-| [Glossary](/STANDARD/GLOSSARY.md) | Term definitions |
-| [Compliance Levels](/STANDARD/COMPLIANCE_LEVELS.md) | Levels 0-3 requirements |
-| [Governance](/STANDARD/GOVERNANCE.md) | Amendment process |
+> Moved to separate repository: [enoq-standard](https://github.com/rossignoliluca/enoq-standard)
 
 ---
 
