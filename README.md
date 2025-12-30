@@ -4,6 +4,8 @@ Constitutional cognitive core. AXIS + Pipeline + 9 Modules.
 
 > Autopoietic viable system for human empowerment.
 
+**Standard:** [ENOQ Standard v1.0 (Draft)](./STANDARD/ENOQ_STANDARD_v1.0_DRAFT.md)
+
 ---
 
 ## Structure
@@ -161,31 +163,24 @@ npx ts-node src/runtime/io/interactive_session.ts
 
 ---
 
-## Changelog (v6.x)
+## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **v7.5** | 2025-12-30 | P3: SDK-first surfaces - mail/relation/decision thin wrappers |
-| **v7.4** | 2025-12-30 | P2: Core hardening - content compliance, golden tests, observability |
-| **v7.3** | 2025-12-30 | P1: enoqCore canonical, EnoqError types, LLM fallback chain |
-| **v7.2** | 2025-12-30 | P0 stabilization: 58 new tests, import fixes, axis-check extended |
-| **v7.1** | 2025-12-30 | DECISION traversal: third crossing through geometry |
-| **v7.0.1** | 2025-12-30 | RELATION wording fix: responsibility returns to A |
-| **v7.0** | 2025-12-30 | RELATION traversal: second crossing through geometry |
-| **v6.9.1** | 2025-12-30 | FAST PATH architecture + test stabilization |
-| **v6.9** | 2025-12-29 | MAIL traversal: first real crossing through geometry |
-| **v6.8** | 2025-12-29 | AXIS-CHECK: executable guardrail + implementation map |
-| **v6.7** | 2025-12-29 | Slice 2: core/modules/boundary + verification wired |
-| **v6.6** | 2025-12-29 | Slice 1: core orchestrator wrapper (enoqCore) |
-| **v6.5.1** | 2025-12-29 | Fix broken INDEX.md links |
-| **v6.5** | 2025-12-29 | Docs cleanup: 33 files → legacy, artifacts gitignored |
-| **v6.4.1** | 2025-12-29 | Fix SQLite clear() table name bug (618/618 tests) |
-| **v6.4** | 2025-12-29 | Phase 2 hygiene: scaffolds, dedup, legacy banners |
-| **v6.3.1** | 2025-12-29 | Critical hygiene: scripts, tsconfig, hash freeze |
-| **v6.3** | 2025-12-29 | Docs cleanup: AXIS.md→AXIS_PHILOSOPHY.md, CONSTITUTION→legacy |
-| **v6.2** | 2025-12-29 | Scatter cleanup: legacy banners, research/ consolidation |
-| **v6.1** | 2025-12-29 | Documentation coherence: 9 READMEs, INDEX updates |
-| **v6.0** | 2025-12-29 | AXIS constitutional freeze (12 axioms, 11 invariants) |
+| **v8.0** | 2025-12-30 | **CORE FREEZE** - Infrastructure stable |
+| **v7.9** | 2025-12-30 | Responsibility Return invariant hardening |
+| **v7.8** | 2025-12-30 | P6: Connectors (Email + Webhook) |
+| **v7.7** | 2025-12-30 | P5: Storage & Audit (SQLite) |
+| **v7.6** | 2025-12-30 | P4: API Thin (Fastify wrapper) |
+| **v7.5** | 2025-12-30 | P3: SDK-first surfaces (mail/relation/decision) |
+| **v7.4** | 2025-12-30 | P2: Core hardening (content compliance, golden tests) |
+| **v7.3** | 2025-12-30 | P1: enoqCore canonical, EnoqError types |
+| **v7.2** | 2025-12-30 | P0: 58 new tests, import fixes |
+| **v7.1** | 2025-12-30 | DECISION traversal |
+| **v7.0** | 2025-12-30 | RELATION traversal |
+| **v6.9** | 2025-12-29 | MAIL traversal |
+| **v6.8** | 2025-12-29 | AXIS-CHECK guardrail |
+| **v6.0** | 2025-12-29 | AXIS constitutional freeze |
 
 ### Recent Details
 
