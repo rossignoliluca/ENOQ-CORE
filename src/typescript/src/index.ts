@@ -25,6 +25,7 @@
 // ============================================
 
 export * from './interface/types';
+export * from './interface/errors';
 
 // ============================================
 // CORE - Canonical Entry Point (Slice 2)
