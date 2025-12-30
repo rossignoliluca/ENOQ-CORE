@@ -9,6 +9,11 @@
 
 import { FieldState, ProtocolSelection, SupportedLanguage } from '../../interface/types';
 import * as crypto from 'crypto';
+import {
+  checkCompliance,
+  ComplianceViolation,
+  ComplianceResult,
+} from './content_compliance';
 
 // ============================================
 // TYPES
@@ -487,6 +492,7 @@ function createAuditEntry(
         'constitutional_invariants',
         'ownership',
         'safety',
+        'content_compliance',
       ],
       violations: violations.map(v => ({
         check: v.check,
@@ -517,12 +523,42 @@ function hash(input: string): string {
 }
 
 // ============================================
+// CONTENT COMPLIANCE CHECK (P2.1)
+// ============================================
+
+function checkContentCompliance(
+  output: string,
+  language: SupportedLanguage | 'mixed'
+): Violation[] {
+  const violations: Violation[] = [];
+
+  // Normalize language (use 'en' for mixed)
+  const lang: SupportedLanguage = language === 'mixed' ? 'en' : language;
+
+  // Run compliance check
+  const result = checkCompliance(output, lang);
+
+  // Convert compliance violations to S5 violations
+  for (const cv of result.violations) {
+    violations.push({
+      check: `compliance_${cv.category.toLowerCase()}`,
+      category: 'constitutional',
+      severity: cv.severity === 'stop' ? 'critical' : 'moderate',
+      pattern: cv.pattern_id,
+      detail: `Content compliance violation: ${cv.category} - "${cv.matched_text}" (${cv.invariant})`,
+    });
+  }
+
+  return violations;
+}
+
+// ============================================
 // MAIN VERIFY FUNCTION
 // ============================================
 
 export function verify(input: S5Input, attemptCount: number = 0): S5Result {
   const violations: Violation[] = [];
-  
+
   // Run all checks
   violations.push(
     ...checkForbiddenActions(input.output.text, input.selection.forbidden)
@@ -538,6 +574,11 @@ export function verify(input: S5Input, attemptCount: number = 0): S5Result {
   );
   violations.push(
     ...checkSafety(input.output.text, input.field, input.selection)
+  );
+
+  // P2.1: Content Compliance Engine check
+  violations.push(
+    ...checkContentCompliance(input.output.text, input.output.language)
   );
   
   // Determine result
