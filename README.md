@@ -135,6 +135,7 @@ npx ts-node src/runtime/io/interactive_session.ts
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **v7.1** | 2025-12-30 | DECISION traversal: third crossing through geometry |
 | **v7.0.1** | 2025-12-30 | RELATION wording fix: responsibility returns to A |
 | **v7.0** | 2025-12-30 | RELATION traversal: second crossing through geometry |
 | **v6.9.1** | 2025-12-30 | FAST PATH architecture + test stabilization |
@@ -153,6 +154,8 @@ npx ts-node src/runtime/io/interactive_session.ts
 | **v6.0** | 2025-12-29 | AXIS constitutional freeze (12 axioms, 11 invariants) |
 
 ### Recent Details
+
+**v7.1**: DECISION traversal - clarifies decisions: `npx ts-node src/surfaces/cli/decision.ts`. No recommendations. Rubicon detection (INV-009).
 
 **v7.0.1**: RELATION wording - "Responsibility returns to: A (your agency)" + "B owns: their feelings/reactions".
 

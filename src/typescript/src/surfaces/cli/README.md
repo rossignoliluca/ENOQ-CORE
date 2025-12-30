@@ -79,6 +79,44 @@ permit() → act(callLLM) → verify → stop
 
 ---
 
+### `enoq decision` (v7.1)
+
+Third traversal. Clarifies a decision. No recommendations. No choosing.
+
+```bash
+npx ts-node src/surfaces/cli/decision.ts
+```
+
+**Input:**
+- Decision statement (what to clarify)
+- Context (work/personal/other)
+- Non-negotiables (constraints)
+- Time horizon (optional)
+- Risk tolerance (optional, descriptive)
+
+**Output:**
+- Decision Frame (what is / is not being decided)
+- Options Space (2-3 neutral options)
+- Tradeoffs (one upside/downside per option)
+- Rubicon Check (if threshold detected → ENOQ withdraws)
+- Ownership ("Decision ownership remains with you")
+- STOP (no follow-up)
+
+**Rules (AXIS enforced):**
+- No recommendations or rankings
+- No optimization language
+- No artificial uncertainty reduction
+- Rubicon detection (INV-009)
+- Mandatory STOP after output
+
+**Architecture: FAST PATH**
+
+```
+permit() → act(callLLM) → verify → stop
+```
+
+---
+
 ## Legacy
 
 The interactive session (`cli.ts`) re-exports from `runtime/io/`:
