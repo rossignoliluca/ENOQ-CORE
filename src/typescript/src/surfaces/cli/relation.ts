@@ -41,6 +41,7 @@ interface RelationOutput {
     aControls: string[];
     aDoesNotControl: string[];
     responsibilityReturns: string;
+    bOwns: string;
   };
   minimalNextAct?: string;
 }
@@ -145,9 +146,10 @@ TENSION AXES
 - [axis 3 if relevant]
 
 BOUNDARY LINES
-A controls: [list]
-A does not control: [list]
-Responsibility returns to: [where]
+A controls: [your choices/actions]
+A does not control: [B's states/reactions]
+Responsibility returns to: A (your agency)
+B owns: [their feelings/reactions]
 
 MINIMAL NEXT ACT (optional, omit if risks boundary)
 [single descriptive act, not advice]
@@ -166,6 +168,7 @@ function parseRelationOutput(output: string): RelationOutput {
       aControls: [],
       aDoesNotControl: [],
       responsibilityReturns: '',
+      bOwns: '',
     },
   };
 
@@ -197,6 +200,12 @@ function parseRelationOutput(output: string): RelationOutput {
   }
   if (responsibilityMatch) {
     result.boundaryLines.responsibilityReturns = responsibilityMatch[1].trim();
+  }
+
+  // Parse B owns
+  const bOwnsMatch = output.match(/B owns:\s*(.+)/i);
+  if (bOwnsMatch) {
+    result.boundaryLines.bOwns = bOwnsMatch[1].trim();
   }
 
   // Parse Minimal Next Act (optional)
@@ -242,7 +251,8 @@ function displayOutput(parsed: RelationOutput, raw: string, signals: string[]) {
   console.log('┌─── BOUNDARY LINES ─────────────────────────────────────────────┐');
   console.log(`│ A controls: ${parsed.boundaryLines.aControls.join(', ') || '(none)'}`);
   console.log(`│ A does NOT control: ${parsed.boundaryLines.aDoesNotControl.join(', ') || '(none)'}`);
-  console.log(`│ Responsibility returns to: ${parsed.boundaryLines.responsibilityReturns || '(not specified)'}`);
+  console.log(`│ Responsibility returns to: ${parsed.boundaryLines.responsibilityReturns || 'A (your agency)'}`);
+  console.log(`│ B owns: ${parsed.boundaryLines.bOwns || 'their feelings/reactions'}`);
   console.log('└────────────────────────────────────────────────────────────────┘');
 
   // Minimal Next Act (optional)
