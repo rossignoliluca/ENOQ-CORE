@@ -28,6 +28,14 @@ import {
   VerificationDecision,
 } from '../modules/verification';
 
+import {
+  emitPipelineStart,
+  emitPipelineEnd,
+  emitStateTransition,
+  emitBoundaryBlocked,
+  emitVerifyFailed,
+} from '../signals/observability';
+
 // ============================================
 // SIGNALS (stubs for now)
 // ============================================
@@ -110,10 +118,26 @@ export async function enoqCore(
   session: Session,
   config: CoreConfig = {}
 ): Promise<CoreResult> {
+  const startTime = Date.now();
   const emitter = createSignalEmitter();
   const signalsEnabled = config.signals_enabled !== false;
   const boundaryEnabled = config.boundary_enabled !== false;
   const verificationEnabled = config.verification_enabled !== false;
+  const statesTraversed: PipelineState[] = [];
+  let lastStateTime = startTime;
+
+  // Context for observability events
+  const eventContext = {
+    session_id: session.session_id,
+    turn_number: session.turns.length,
+  };
+
+  // Start pipeline observability
+  const correlationId = emitPipelineStart(
+    message.length,
+    undefined, // Language detected later
+    eventContext
+  );
 
   // ========================================
   // PERMIT - Core boundary classification
@@ -125,12 +149,28 @@ export async function enoqCore(
       session_id: session.session_id,
       turn_number: session.turns.length,
     });
+
+    // Emit BOUNDARY_BLOCKED if not permitted (future: adversarial patterns)
+    // Currently all inputs are permitted; boundary determines *how* not *if*
+    if (!boundaryDecision.permitted) {
+      emitBoundaryBlocked(
+        boundaryDecision.classification.signal,
+        'Boundary check blocked input',
+        boundaryDecision.classification.confidence,
+        message,
+        { ...eventContext, correlation_id: correlationId }
+      );
+    }
   }
 
   if (signalsEnabled) {
+    const now = Date.now();
+    emitStateTransition('START', 'PERMIT', now - lastStateTime, { ...eventContext, correlation_id: correlationId });
+    lastStateTime = now;
+    statesTraversed.push('PERMIT');
     emitter.emit({
       state: 'PERMIT',
-      timestamp: Date.now(),
+      timestamp: now,
       metadata: boundaryDecision ? {
         signal: boundaryDecision.classification.signal,
         confidence: boundaryDecision.classification.confidence,
@@ -142,7 +182,11 @@ export async function enoqCore(
   // SENSE through ACT - Delegate to runtime
   // ========================================
   if (signalsEnabled) {
-    emitter.emit({ state: 'SENSE', timestamp: Date.now() });
+    const now = Date.now();
+    emitStateTransition('PERMIT', 'SENSE', now - lastStateTime, { ...eventContext, correlation_id: correlationId });
+    lastStateTime = now;
+    statesTraversed.push('SENSE');
+    emitter.emit({ state: 'SENSE', timestamp: now });
   }
 
   // Merge with defaults for runtime compatibility
@@ -153,6 +197,14 @@ export async function enoqCore(
 
   const result = await runtimeEnoq(message, session, runtimeConfig);
 
+  // Track ACT state
+  if (signalsEnabled) {
+    const now = Date.now();
+    emitStateTransition('SENSE', 'ACT', now - lastStateTime, { ...eventContext, correlation_id: correlationId });
+    lastStateTime = now;
+    statesTraversed.push('ACT');
+  }
+
   // ========================================
   // VERIFY - Core verification (if data available)
   // ========================================
@@ -160,7 +212,11 @@ export async function enoqCore(
 
   if (verificationEnabled && result.trace?.s3_selection && result.trace?.s1_field) {
     if (signalsEnabled) {
-      emitter.emit({ state: 'VERIFY', timestamp: Date.now() });
+      const now = Date.now();
+      emitStateTransition('ACT', 'VERIFY', now - lastStateTime, { ...eventContext, correlation_id: correlationId });
+      lastStateTime = now;
+      statesTraversed.push('VERIFY');
+      emitter.emit({ state: 'VERIFY', timestamp: now });
     }
 
     // Extract language from field (LanguageDetectionResult is the language itself)
@@ -180,14 +236,41 @@ export async function enoqCore(
         previous_hash: 'genesis',
       }
     );
+
+    // Emit VERIFY_FAILED if violations found
+    if (!verificationDecision.passed && verificationDecision.result.violations.length > 0) {
+      emitVerifyFailed(
+        verificationDecision.result.violations.map((v) => ({
+          invariant: v.check,
+          category: v.category,
+          matched_text: v.pattern,
+        })),
+        verificationDecision.result.fallback_required ? 'FALLBACK' : 'STOP',
+        result.output,
+        { ...eventContext, correlation_id: correlationId }
+      );
+    }
   }
 
   // ========================================
   // STOP - Always reached
   // ========================================
+  const endTime = Date.now();
   if (signalsEnabled) {
-    emitter.emit({ state: 'STOP', timestamp: Date.now() });
+    emitStateTransition(statesTraversed[statesTraversed.length - 1] || 'START', 'STOP', endTime - lastStateTime, { ...eventContext, correlation_id: correlationId });
+    statesTraversed.push('STOP');
+    emitter.emit({ state: 'STOP', timestamp: endTime });
   }
+
+  // End pipeline observability
+  const success = !verificationDecision || verificationDecision.passed;
+  emitPipelineEnd(
+    success,
+    result.output.length,
+    endTime - startTime,
+    statesTraversed,
+    { ...eventContext, correlation_id: correlationId }
+  );
 
   return {
     ...result,
