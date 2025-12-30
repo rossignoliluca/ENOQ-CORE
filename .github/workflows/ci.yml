@@ -40,6 +40,10 @@ jobs:
         working-directory: src/typescript
         run: ./scripts/check-imports.sh
 
+      - name: AXIS verification
+        working-directory: src/typescript
+        run: npm run axis-check
+
   # ============================================================================
   # CONSTITUTIONAL GUARD
   # ============================================================================
