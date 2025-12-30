@@ -810,6 +810,20 @@ async function executeV3Flow(input: V3FlowInput): Promise<V3FlowResult> {
 // MAIN PIPELINE
 // ============================================
 
+/**
+ * @deprecated Use enoqCore() from core/pipeline/orchestrator instead.
+ *
+ * enoq() is the legacy runtime entry point. It still works but:
+ * - Does NOT run core boundary classification
+ * - Does NOT run core verification
+ * - Does NOT emit pipeline signals
+ *
+ * enoqCore() is the canonical entry point that wraps this with
+ * constitutional checks (permit + verify + STOP).
+ *
+ * Migration: Replace `import { enoq } from 'runtime/pipeline/pipeline'`
+ *           with `import { enoqCore } from 'core/pipeline/orchestrator'`
+ */
 export async function enoq(
   input: string,
   session: Session,

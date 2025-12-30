@@ -3,6 +3,7 @@
  *
  * Architecture:
  * - interface/: Shared contracts and types
+ * - core/: Canonical entry point + constitutional modules
  * - gate/: Normative gating (classification, enforcement, verification)
  * - operational/: Routing & detection (detectors, gating, providers)
  * - mediator/: Cognitive processing (L1-L5 layers)
@@ -15,7 +16,8 @@
  * - Friston: Free Energy Principle
  * - Baars: Global Workspace Theory
  *
- * PRIMARY API: enoq() - Full pipeline processing
+ * CANONICAL API: enoqCore() - Full pipeline with constitutional checks
+ * LEGACY API: enoq() - Runtime only (deprecated)
  */
 
 // ============================================
@@ -23,6 +25,27 @@
 // ============================================
 
 export * from './interface/types';
+
+// ============================================
+// CORE - Canonical Entry Point (Slice 2)
+// ============================================
+
+export {
+  // Canonical entry point
+  enoqCore,
+  createCoreSession,
+  CoreConfig,
+  CoreResult,
+  // Signals
+  PipelineState,
+  PipelineSignal,
+  SignalEmitter,
+  // FAST PATH re-exports
+  permit,
+  BoundaryDecision,
+  verifyOutput,
+  VerificationDecision,
+} from './core/pipeline/orchestrator';
 
 // ============================================
 // MEDIATOR - Cognitive Processing Layers
@@ -144,10 +167,13 @@ export { default as verify, S5Result, S5Input, AuditEntry, FallbackLevel, getFal
 
 // ============================================
 // RUNTIMES - Execution Layers
+// @deprecated Use enoqCore() from CORE section above
 // ============================================
 
 export {
+  /** @deprecated Use enoqCore() instead */
   enoq,
+  /** @deprecated Use createCoreSession() instead */
   createSession,
   Session,
   Turn,
