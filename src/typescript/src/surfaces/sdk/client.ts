@@ -12,6 +12,13 @@
 import { createCoreSession, permit } from '../../core/pipeline/orchestrator';
 import { callLLM, checkLLMAvailability } from '../../operational/providers/llm_provider';
 import { checkCompliance } from '../../gate/verification/content_compliance';
+import {
+  createAuditContext,
+  auditPipelineStart,
+  auditPipelineEnd,
+  auditBoundaryBlocked,
+  auditRubiconWithdraw,
+} from './audit';
 
 import {
   MailInput,
@@ -142,59 +149,76 @@ export async function mail(input: MailInput, opts: SDKOptions = {}): Promise<Mai
   const session = createCoreSession();
   const signals: PipelineSignal[] = [];
 
-  // PERMIT
-  signals.push('PERMIT');
-  const boundaryDecision = permit(prompt, {
-    session_id: session.session_id,
-    turn_number: 0,
-  });
+  // Audit context
+  const audit = createAuditContext('MAIL', session.session_id);
+  await auditPipelineStart(audit, { input_length: prompt.length });
 
-  if (!boundaryDecision.permitted) {
-    throw new Error('Input blocked by boundary classification.');
-  }
+  try {
+    // PERMIT
+    signals.push('PERMIT');
+    const boundaryDecision = permit(prompt, {
+      session_id: session.session_id,
+      turn_number: 0,
+    });
 
-  // ACT
-  signals.push('ACT');
-  const llmResponse = await callLLM({
-    messages: [
-      {
-        role: 'system',
-        content: `You are an email drafting assistant. You produce 2-3 alternative email drafts.
+    if (!boundaryDecision.permitted) {
+      await auditBoundaryBlocked(audit, 'boundary_classification');
+      throw new Error('Input blocked by boundary classification.');
+    }
+
+    // ACT
+    signals.push('ACT');
+    const llmResponse = await callLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You are an email drafting assistant. You produce 2-3 alternative email drafts.
 Rules:
 - No ranking or recommendation of which draft is "best"
 - No persuasion or manipulation language
 - Vary the tone across drafts (direct, warm, formal)
 - Keep each draft concise (3-5 sentences)`,
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.7,
-    max_tokens: 1000,
-  });
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
 
-  const raw = llmResponse.content;
+    const raw = llmResponse.content;
 
-  // VERIFY
-  signals.push('VERIFY');
-  if (!raw || raw.trim().length === 0) {
-    throw new Error('Empty output from LLM.');
+    // VERIFY
+    signals.push('VERIFY');
+    if (!raw || raw.trim().length === 0) {
+      await auditPipelineEnd(audit, 'ERROR', { reason: 'empty_output' });
+      throw new Error('Empty output from LLM.');
+    }
+
+    const compliance = buildComplianceFlags(raw, lang);
+
+    // STOP
+    signals.push('STOP');
+
+    const { parsed, rationale } = parseMailOutput(raw);
+
+    // Audit success
+    await auditPipelineEnd(audit, 'PASS', { output_length: raw.length });
+
+    return {
+      output: parsed,
+      rationale,
+      signals,
+      stop: true,
+      compliance,
+      ...(opts.includeRaw ? { raw } : {}),
+    };
+  } catch (err) {
+    // Audit error (if not already audited)
+    if (err instanceof Error && !err.message.includes('blocked')) {
+      await auditPipelineEnd(audit, 'ERROR', { error: err.message });
+    }
+    throw err;
   }
-
-  const compliance = buildComplianceFlags(raw, lang);
-
-  // STOP
-  signals.push('STOP');
-
-  const { parsed, rationale } = parseMailOutput(raw);
-
-  return {
-    output: parsed,
-    rationale,
-    signals,
-    stop: true,
-    compliance,
-    ...(opts.includeRaw ? { raw } : {}),
-  };
 }
 
 // ============================================
@@ -311,24 +335,30 @@ export async function relation(input: RelationInput, opts: SDKOptions = {}): Pro
   const session = createCoreSession();
   const signals: PipelineSignal[] = [];
 
-  // PERMIT
-  signals.push('PERMIT');
-  const boundaryDecision = permit(prompt, {
-    session_id: session.session_id,
-    turn_number: 0,
-  });
+  // Audit context
+  const audit = createAuditContext('RELATION', session.session_id);
+  await auditPipelineStart(audit, { input_length: prompt.length });
 
-  if (!boundaryDecision.permitted) {
-    throw new Error('Input blocked by boundary classification.');
-  }
+  try {
+    // PERMIT
+    signals.push('PERMIT');
+    const boundaryDecision = permit(prompt, {
+      session_id: session.session_id,
+      turn_number: 0,
+    });
 
-  // ACT
-  signals.push('ACT');
-  const llmResponse = await callLLM({
-    messages: [
-      {
-        role: 'system',
-        content: `You map human relationships. Descriptive only.
+    if (!boundaryDecision.permitted) {
+      await auditBoundaryBlocked(audit, 'boundary_classification');
+      throw new Error('Input blocked by boundary classification.');
+    }
+
+    // ACT
+    signals.push('ACT');
+    const llmResponse = await callLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You map human relationships. Descriptive only.
 
 RULES:
 - No coaching, therapy, or advice
@@ -338,36 +368,46 @@ RULES:
 - Describe roles and tensions neutrally
 - If next act risks boundary, OMIT it
 - Keep output structured and brief`,
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.5,
-    max_tokens: 800,
-  });
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.5,
+      max_tokens: 800,
+    });
 
-  const raw = llmResponse.content;
+    const raw = llmResponse.content;
 
-  // VERIFY
-  signals.push('VERIFY');
-  if (!raw || raw.trim().length === 0) {
-    throw new Error('Empty output from LLM.');
+    // VERIFY
+    signals.push('VERIFY');
+    if (!raw || raw.trim().length === 0) {
+      await auditPipelineEnd(audit, 'ERROR', { reason: 'empty_output' });
+      throw new Error('Empty output from LLM.');
+    }
+
+    const compliance = buildComplianceFlags(raw, lang);
+
+    // STOP
+    signals.push('STOP');
+
+    const { parsed, rationale } = parseRelationOutput(raw);
+
+    // Audit success
+    await auditPipelineEnd(audit, 'PASS', { output_length: raw.length });
+
+    return {
+      output: parsed,
+      rationale,
+      signals,
+      stop: true,
+      compliance,
+      ...(opts.includeRaw ? { raw } : {}),
+    };
+  } catch (err) {
+    if (err instanceof Error && !err.message.includes('blocked')) {
+      await auditPipelineEnd(audit, 'ERROR', { error: err.message });
+    }
+    throw err;
   }
-
-  const compliance = buildComplianceFlags(raw, lang);
-
-  // STOP
-  signals.push('STOP');
-
-  const { parsed, rationale } = parseRelationOutput(raw);
-
-  return {
-    output: parsed,
-    rationale,
-    signals,
-    stop: true,
-    compliance,
-    ...(opts.includeRaw ? { raw } : {}),
-  };
 }
 
 // ============================================
@@ -492,24 +532,30 @@ export async function decision(input: DecisionInput, opts: SDKOptions = {}): Pro
   const session = createCoreSession();
   const signals: PipelineSignal[] = [];
 
-  // PERMIT
-  signals.push('PERMIT');
-  const boundaryDecision = permit(prompt, {
-    session_id: session.session_id,
-    turn_number: 0,
-  });
+  // Audit context
+  const audit = createAuditContext('DECISION', session.session_id);
+  await auditPipelineStart(audit, { input_length: prompt.length });
 
-  if (!boundaryDecision.permitted) {
-    throw new Error('Input blocked by boundary classification.');
-  }
+  try {
+    // PERMIT
+    signals.push('PERMIT');
+    const boundaryDecision = permit(prompt, {
+      session_id: session.session_id,
+      turn_number: 0,
+    });
 
-  // ACT
-  signals.push('ACT');
-  const llmResponse = await callLLM({
-    messages: [
-      {
-        role: 'system',
-        content: `You clarify decisions. You do NOT recommend, rank, optimize, or choose.
+    if (!boundaryDecision.permitted) {
+      await auditBoundaryBlocked(audit, 'boundary_classification');
+      throw new Error('Input blocked by boundary classification.');
+    }
+
+    // ACT
+    signals.push('ACT');
+    const llmResponse = await callLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You clarify decisions. You do NOT recommend, rank, optimize, or choose.
 
 RULES:
 - No recommendations or rankings
@@ -519,34 +565,49 @@ RULES:
 - Detect Rubicon (irreversibility, value threshold)
 - If Rubicon: state it and withdraw
 - Keep output structured`,
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.4,
-    max_tokens: 900,
-  });
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.4,
+      max_tokens: 900,
+    });
 
-  const raw = llmResponse.content;
+    const raw = llmResponse.content;
 
-  // VERIFY
-  signals.push('VERIFY');
-  if (!raw || raw.trim().length === 0) {
-    throw new Error('Empty output from LLM.');
+    // VERIFY
+    signals.push('VERIFY');
+    if (!raw || raw.trim().length === 0) {
+      await auditPipelineEnd(audit, 'ERROR', { reason: 'empty_output' });
+      throw new Error('Empty output from LLM.');
+    }
+
+    const compliance = buildComplianceFlags(raw, lang);
+
+    // STOP
+    signals.push('STOP');
+
+    const { parsed, rationale } = parseDecisionOutput(raw);
+
+    // Audit Rubicon if detected
+    if (parsed.rubiconDetected) {
+      await auditRubiconWithdraw(audit, 'decision');
+      await auditPipelineEnd(audit, 'WITHDRAW', { rubicon: true });
+    } else {
+      await auditPipelineEnd(audit, 'PASS', { output_length: raw.length });
+    }
+
+    return {
+      output: parsed,
+      rationale,
+      signals,
+      stop: true,
+      compliance,
+      ...(opts.includeRaw ? { raw } : {}),
+    };
+  } catch (err) {
+    if (err instanceof Error && !err.message.includes('blocked')) {
+      await auditPipelineEnd(audit, 'ERROR', { error: err.message });
+    }
+    throw err;
   }
-
-  const compliance = buildComplianceFlags(raw, lang);
-
-  // STOP
-  signals.push('STOP');
-
-  const { parsed, rationale } = parseDecisionOutput(raw);
-
-  return {
-    output: parsed,
-    rationale,
-    signals,
-    stop: true,
-    compliance,
-    ...(opts.includeRaw ? { raw } : {}),
-  };
 }

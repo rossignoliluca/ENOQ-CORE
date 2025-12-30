@@ -25,6 +25,13 @@
 // Client functions
 export { mail, relation, decision } from './client';
 
+// Audit helpers (for testing/admin)
+export {
+  setAuditEnabled,
+  isAuditEnabled,
+  createAuditContext,
+} from './audit';
+
 // Types
 export type {
   // Common
